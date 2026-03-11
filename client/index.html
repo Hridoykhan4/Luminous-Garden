@@ -5,9 +5,130 @@
     <link rel="icon" type="image/svg+xml" href="/logoPlants.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Luminous Garden</title>
+    <style>
+      :root {
+        --loader-bg: #ffffff !important;
+        --loader-accent: #0f172a !important;
+      }
+
+      #initial-loader {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        background-color: var(--loader-bg) !important;
+        z-index: 2147483647 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        font-family: "Urbanist", sans-serif !important;
+      }
+
+      .brand-box {
+        position: relative !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+      }
+
+      .glow {
+        position: absolute !important;
+        width: 120px;
+        height: 120px;
+        background: var(--loader-accent);
+        filter: blur(50px);
+        border-radius: 50%;
+        opacity: 0.15;
+        animation: loaderPulse 2s ease-in-out infinite;
+      }
+
+      .loader-logo {
+        width: 80px !important;
+        height: auto !important;
+        position: relative !important;
+        z-index: 10;
+        animation: loaderFloat 3s ease-in-out infinite;
+      }
+
+      .track {
+        margin-top: 40px;
+        width: 150px;
+        height: 2px;
+        background: rgba(128, 128, 128, 0.1);
+        border-radius: 10px;
+        overflow: hidden;
+      }
+
+      .bar {
+        height: 100%;
+        width: 40%;
+        background: var(--loader-accent);
+        animation: loaderSlide 1.5s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+      }
+
+      @keyframes loaderPulse {
+        0%,
+        100% {
+          transform: scale(1);
+          opacity: 0.1;
+        }
+        50% {
+          transform: scale(1.3);
+          opacity: 0.2;
+        }
+      }
+      @keyframes loaderFloat {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-10px);
+        }
+      }
+      @keyframes loaderSlide {
+        0% {
+          transform: translateX(-150%);
+        }
+        100% {
+          transform: translateX(300%);
+        }
+      }
+
+      .fade-out {
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+      }
+    </style>
   </head>
   <body>
+    <div id="initial-loader" aria-label="Loading Luminous Garden">
+      <div class="brand-box">
+        <div class="glow"></div>
+        <img src="/logoPlants.png" alt="Luminous Logo" class="loader-logo" />
+      </div>
+      <div class="track"><div class="bar"></div></div>
+    </div>
+
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+
+    <script>
+      window.addEventListener("load", () => {
+        const loader = document.getElementById("initial-loader");
+        if (loader) {
+          setTimeout(() => {
+            loader.classList.add("fade-out");
+            setTimeout(() => loader.remove(), 600);
+          }, 500);
+        }
+      });
+    </script>
   </body>
 </html>
