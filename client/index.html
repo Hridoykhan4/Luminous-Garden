@@ -1,65 +1,103 @@
 <!doctype html>
-<html lang="en" data-theme="light">
+<html lang="en">
   <head>
+    <!-- Core -->
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/logoPlants.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Luminous Garden</title>
+
+    <!-- Title -->
+    <title>Luminous Garden | Smart Plant Management</title>
+
+    <!-- SEO -->
+    <meta
+      name="description"
+      content="Luminous Garden is a smart SaaS platform for plant management, garden tracking, and smart monitoring with map integration."
+    />
+    <meta name="keywords" content="plant management, garden management, smart garden, agriculture SaaS, plant tracking" />
+    <meta name="author" content="Md. Toyob Uddin Hridoy" />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Luminous Garden" />
+    <meta property="og:description" content="Smart SaaS platform for managing plants and gardens." />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/logoPlants.png" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Theme -->
+    <meta name="theme-color" content="#0f172a" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/logoPlants.png" />
+
+    <!-- Preload Logo -->
+    <link rel="preload" href="/logoPlants.png" as="image" />
+
+    <!-- Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <link
+      href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Loader Style -->
     <style>
       :root {
-        --loader-bg: #ffffff !important;
-        --loader-accent: #0f172a !important;
+        --loader-bg: #ffffff;
+        --loader-accent: #0f172a;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Urbanist", sans-serif;
+        background: var(--loader-bg);
       }
 
       #initial-loader {
-        position: fixed !important;
-        top: 0 !important;
-        left: 0 !important;
-        width: 100vw !important;
-        height: 100vh !important;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        justify-content: center !important;
-        background-color: var(--loader-bg) !important;
-        z-index: 2147483647 !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        font-family: "Urbanist", sans-serif !important;
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background-color: var(--loader-bg);
+        z-index: 9999;
+        transition: opacity 0.5s ease;
       }
 
       .brand-box {
-        position: relative !important;
-        display: flex !important;
-        justify-content: center !important;
-        align-items: center !important;
+        position: relative;
+        display: flex;
+        justify-content: center;
+        align-items: center;
       }
 
       .glow {
-        position: absolute !important;
+        position: absolute;
         width: 120px;
         height: 120px;
         background: var(--loader-accent);
         filter: blur(50px);
         border-radius: 50%;
         opacity: 0.15;
-        animation: loaderPulse 2s ease-in-out infinite;
+        animation: pulse 2s ease-in-out infinite;
       }
 
       .loader-logo {
-        width: 80px !important;
-        height: auto !important;
-        position: relative !important;
-        z-index: 10;
-        animation: loaderFloat 3s ease-in-out infinite;
+        width: 80px;
+        position: relative;
+        z-index: 2;
+        animation: float 3s ease-in-out infinite;
       }
 
       .track {
         margin-top: 40px;
         width: 150px;
-        height: 2px;
-        background: rgba(128, 128, 128, 0.1);
+        height: 3px;
+        background: rgba(0, 0, 0, 0.08);
         border-radius: 10px;
         overflow: hidden;
       }
@@ -68,10 +106,10 @@
         height: 100%;
         width: 40%;
         background: var(--loader-accent);
-        animation: loaderSlide 1.5s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+        animation: slide 1.5s cubic-bezier(0.65, 0, 0.35, 1) infinite;
       }
 
-      @keyframes loaderPulse {
+      @keyframes pulse {
         0%,
         100% {
           transform: scale(1);
@@ -82,7 +120,8 @@
           opacity: 0.2;
         }
       }
-      @keyframes loaderFloat {
+
+      @keyframes float {
         0%,
         100% {
           transform: translateY(0);
@@ -91,7 +130,8 @@
           transform: translateY(-10px);
         }
       }
-      @keyframes loaderSlide {
+
+      @keyframes slide {
         0% {
           transform: translateX(-150%);
         }
@@ -101,33 +141,48 @@
       }
 
       .fade-out {
-        opacity: 0 !important;
-        visibility: hidden !important;
-        pointer-events: none !important;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
       }
     </style>
   </head>
+
   <body>
+    <!-- Initial Loader -->
     <div id="initial-loader" aria-label="Loading Luminous Garden">
       <div class="brand-box">
         <div class="glow"></div>
-        <img src="/logoPlants.png" alt="Luminous Logo" class="loader-logo" />
+        <img src="/logoPlants.png" alt="Luminous Garden Logo" class="loader-logo" />
       </div>
-      <div class="track"><div class="bar"></div></div>
+
+      <div class="track">
+        <div class="bar"></div>
+      </div>
     </div>
 
+    <!-- React Root -->
     <div id="root"></div>
+
+    <!-- App Entry -->
     <script type="module" src="/src/main.jsx"></script>
 
+    <!-- Loader Remove Script -->
     <script>
       window.addEventListener("load", () => {
         const loader = document.getElementById("initial-loader");
-        if (loader) {
+
+        if (!loader) return;
+
+        requestAnimationFrame(() => {
           setTimeout(() => {
             loader.classList.add("fade-out");
-            setTimeout(() => loader.remove(), 600);
-          }, 500);
-        }
+
+            setTimeout(() => {
+              loader.remove();
+            }, 500);
+          }, 400);
+        });
       });
     </script>
   </body>
