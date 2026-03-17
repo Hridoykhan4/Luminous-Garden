@@ -3,7 +3,7 @@ const express = require("express");
 const { MongoClient, ServerApiVersion } = require("mongodb");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
-const morgan = require('morgan');
+const morgan = require("morgan");
 const port = process.env.PORT || 5000;
 const jwt = require("jsonwebtoken");
 const app = express();
@@ -15,14 +15,16 @@ const cookieOptions = {
 };
 
 const corsOptions = {
-  origin: ["http://localhost:5000"],
+  origin: ["http://localhost:5173"],
   credentials: true,
+  optionsSuccessStatus: 200,
 };
 
 // Middlewares
 app.use(cors(corsOptions));
 app.use(express.json());
-app.use(morgan('dev'))
+app.use(morgan("dev"));
+app.use(cookieParser())
 app.use((err, req, res, next) => {
   console.log(err);
   res.status(500).send({ message: "Internal Server Error" });
@@ -31,6 +33,7 @@ app.use((err, req, res, next) => {
 // Custom Middlewares
 const verifyToken = (req, res, next) => {
   const token = req.cookies?.token;
+  console.log(req, req?.cookies, token);
   if (!token) return res.status(403).send({ message: "Unauthorized Access" });
   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
     if (err) return res.status(401).send({ message: "Unauthorized Access" });
@@ -51,8 +54,10 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
+    const db = client.db("luminous-garden");
+    const usersCollection = db.collection("users");
     /* JWT related APIs Start */
-    app.post("/jwt", async (req, res) => {
+    app.post("/jwt", verifyToken, async (req, res) => {
       const user = req.body;
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
         expiresIn: "300d",
@@ -60,11 +65,26 @@ async function run() {
       res.cookie("token", token, cookieOptions).send({ success: true });
     });
 
+    app.post("/users", async (req, res) => {
+      const { email, lastLoggedIn } = req.body;
+      if (await usersCollection.findOne({ email })) {
+        await usersCollection.updateOne({ email }, { $set: { lastLoggedIn } });
+        return res.status(200).send({
+          message: "Already Exists User",
+          insertedId: false,
+          exists: true,
+        });
+      } 
+      const user = req.body;
+      const result = await usersCollection.insertOne({...user, role: 'customer'});
+      res.send(result);
+    });
+
     app.get("/logout", async (req, res) => {
       try {
         res
           .clearCookie("token", {
-              ...cookieOptions,
+            ...cookieOptions,
             maxAge: 0,
           })
           .send({ success: "Logged out" });

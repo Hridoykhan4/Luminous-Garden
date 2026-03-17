@@ -1,4 +1,4 @@
-import {  useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   GoogleAuthProvider,
   createUserWithEmailAndPassword,
@@ -9,15 +9,15 @@ import {
   signOut,
   updateProfile,
 } from "firebase/auth";
-import axios from "axios";
 import app from "../firebase/firebase.init";
 import AuthContext from "../contexts/AuthContext";
-
+import useAxiosPublic from "@/hooks/useAxiosPublic";
 
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
 const AuthProvider = ({ children }) => {
+  const axiosPublic = useAxiosPublic();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -51,38 +51,35 @@ const AuthProvider = ({ children }) => {
   // onAuthStateChange
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+      setLoading(true);
       console.log("CurrentUser-->", currentUser?.email);
-      if (currentUser?.email) {
-        setUser(currentUser);
-        // save user info in db
-        // await axios.post(
-        //   `${import.meta.env.VITE_API_URL}/users/${currentUser?.email}`,
-        //   {
-        //     name: currentUser?.displayName,
-        //     image: currentUser?.photoURL,
-        //     email: currentUser?.email,
-        //   },
-        // );
-        // Get JWT token
-        // await axios.post(
-        //   `${import.meta.env.VITE_API_URL}/jwt`,
-        //   {
-        //     email: currentUser?.email,
-        //   },
-        //   { withCredentials: true },
-        // );
-      } else {
-        setUser(currentUser);
-        // await axios.get(`${import.meta.env.VITE_API_URL}/logout`, {
-        //   withCredentials: true,
-        // });
+      try {
+        if (currentUser?.email) {
+          const userInfo = {
+            name: currentUser.displayName,
+            email: currentUser.email,
+            photo: currentUser.photoURL,
+            createdAt: new Date().toISOString(),
+            lastLoggedIn: new Date().toISOString(),
+          };
+
+         const {data} =  await axiosPublic.post(`/jwt`, { email: currentUser.email }, {withCredentials: true});
+         console.log(data);
+          await axiosPublic.post(`/users`, userInfo);
+        } else {
+          await axiosPublic.get("/logout", { withCredentials: true });
+        }
+      } catch (err) {
+        console.log(err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
     return () => {
       return unsubscribe();
     };
-  }, []);
+  }, [axiosPublic]);
 
   const authInfo = {
     user,

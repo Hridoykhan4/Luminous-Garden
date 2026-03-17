@@ -1,6 +1,8 @@
 import { useMemo } from "react";
 import { Link, NavLink } from "react-router";
-import { Menu, LogOut, LayoutDashboard, User } from "lucide-react";
+import { CiLogout, CiMenuBurger, CiUser } from "react-icons/ci";
+import { MdOutlineDashboardCustomize } from "react-icons/md";
+
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -17,6 +19,7 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
+  SheetDescription,
 } from "@/components/ui/sheet";
 
 import useAuth from "@/hooks/useAuth";
@@ -67,7 +70,7 @@ const Navbar = () => {
                   <Avatar className="h-10 w-10 border border-primary/20">
                     <AvatarImage src={user?.photoURL} alt={user?.displayName} />
                     <AvatarFallback className="bg-secondary text-primary">
-                      <User size={18} />
+                      <CiUser size={18} />
                     </AvatarFallback>
                   </Avatar>
                 </Button>
@@ -90,14 +93,14 @@ const Navbar = () => {
                     to="/dashboard"
                     className="cursor-pointer flex items-center gap-2"
                   >
-                    <LayoutDashboard size={16} /> Dashboard
+                    <MdOutlineDashboardCustomize size={16} /> Dashboard
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={logOut}
                   className="text-destructive cursor-pointer flex items-center gap-2"
                 >
-                  <LogOut size={16} /> Logout
+                  <CiLogout size={16} /> Logout
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -116,7 +119,7 @@ const Navbar = () => {
           <Sheet>
             <SheetTrigger asChild>
               <Button size="icon" variant="ghost" className="md:hidden">
-                <Menu size={22} />
+                <CiMenuBurger size={22} />
               </Button>
             </SheetTrigger>
             <SheetContent side="right">
@@ -124,6 +127,9 @@ const Navbar = () => {
                 <SheetTitle>
                   <LuminousLogo />
                 </SheetTitle>
+                <SheetDescription className="sr-only">
+                  Mobile navigation menu for Luminous Garden
+                </SheetDescription>
               </SheetHeader>
               <div className="flex flex-col gap-4 mt-8">
                 {navLinks.map((link) => (
@@ -136,7 +142,7 @@ const Navbar = () => {
                   </NavLink>
                 ))}
                 {!user && (
-                  <div className="flex flex-col gap-2 pt-4">
+                  <div className="flex flex-col mx-2   gap-2 pt-4">
                     <Button variant="outline" asChild>
                       <Link to="/login">Login</Link>
                     </Button>
