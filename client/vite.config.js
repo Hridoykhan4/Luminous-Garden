@@ -11,7 +11,18 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "src"), // <- THIS ALIAS
+      "@": path.resolve(__dirname, "src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id){
+          if(id.includes('node_modules')) {
+            return 'vendor'
+          }
+        }
+      }
+    }
+  }
 });

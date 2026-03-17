@@ -2,7 +2,7 @@ import Plants from "../../components/Home/Plants";
 
 const Home = () => {
     return (
-        <div>
+        <div className="container-page">
             <Plants></Plants>
         </div>
     );
