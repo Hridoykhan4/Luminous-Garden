@@ -18,9 +18,12 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id){
-          if(id.includes('node_modules')) {
-            return 'vendor'
-          }
+          if (id.includes('node_modules')) {
+          if (id.includes('firebase')) return 'vendor-firebase';
+          if (id.includes('gsap')) return 'vendor-gsap';
+          if (id.includes('@tanstack')) return 'vendor-query';
+          return 'vendor'; 
+        }
         }
       }
     }
