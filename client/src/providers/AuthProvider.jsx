@@ -16,6 +16,10 @@ import useAxiosPublic from "@/hooks/useAxiosPublic";
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
+googleProvider.setCustomParameters({
+  prompt: "select_account",
+});
+
 const AuthProvider = ({ children }) => {
   const axiosPublic = useAxiosPublic();
   const [user, setUser] = useState(null);
@@ -48,37 +52,45 @@ const AuthProvider = ({ children }) => {
     });
   };
 
-  // onAuthStateChange
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
-      setLoading(true);
-      console.log("CurrentUser-->", currentUser?.email);
-      try {
-        if (currentUser?.email) {
-          const userInfo = {
-            name: currentUser.displayName,
-            email: currentUser.email,
-            photo: currentUser.photoURL,
-            createdAt: new Date().toISOString(),
-            lastLoggedIn: new Date().toISOString(),
-          };
 
-         const {data} =  await axiosPublic.post(`/jwt`, { email: currentUser.email }, {withCredentials: true});
-         console.log(data);
-          await axiosPublic.post(`/users`, userInfo);
-        } else {
-          await axiosPublic.get("/logout", { withCredentials: true });
+      if (currentUser?.email) {
+        const isSessionSynced = sessionStorage.getItem("isSynced");
+
+        if (!isSessionSynced) {
+          try {
+            const userInfo = {
+              name: currentUser.displayName,
+              email: currentUser.email,
+              photo: currentUser.photoURL,
+            };
+
+            // FIXED: One await for both, and added withCredentials
+            await Promise.all([
+              axiosPublic.post(
+                `/auth/jwt`,
+                { email: currentUser.email },
+                { withCredentials: true },
+              ),
+              axiosPublic.post(`/users`, userInfo),
+            ]);
+
+            sessionStorage.setItem("isSynced", "true");
+          } catch (err) {
+            console.error("Auth Sync Error:", err);
+          }
         }
-      } catch (err) {
-        console.log(err);
-      } finally {
-        setLoading(false);
+      } else {
+        sessionStorage.removeItem("isSynced");
+        // Added withCredentials for logout too to clear the cookie properly
+        await axiosPublic.get("/auth/logout", { withCredentials: true });
       }
+      setLoading(false);
     });
-    return () => {
-      return unsubscribe();
-    };
+
+    return () => unsubscribe();
   }, [axiosPublic]);
 
   const authInfo = {

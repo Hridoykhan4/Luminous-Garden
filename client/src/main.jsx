@@ -1,12 +1,17 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import "./index.css";
 import { RouterProvider } from "react-router";
-import Router from "./routers/Router";
-import AuthProvider from "./providers/AuthProvider";
 import { Toaster } from "react-hot-toast";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+
+import Router from "./routers/Router";
+import AuthProvider from "./providers/AuthProvider";
+import "./index.css";
+
+// Force Light Mode on initialization
+document.documentElement.classList.remove("dark");
+document.documentElement.classList.add("light");
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -19,14 +24,38 @@ const queryClient = new QueryClient({
   },
 });
 
+const toasterOptions = {
+  duration: 3000,
+  className: "glass", // Uses the glass class we made in index.css
+  style: {
+    background: "oklch(0.25 0.04 160 / 0.9)", // Matches your Deep Charcoal Green
+    color: "oklch(0.98 0.01 160)",
+    backdropFilter: "blur(10px)",
+    border: "1px solid oklch(0.88 0.02 160 / 0.1)",
+    borderRadius: "12px",
+    fontSize: "14px",
+    fontWeight: "500",
+  },
+  success: {
+    iconTheme: {
+      primary: "oklch(0.45 0.12 160)", // Matches your Primary Garden Green
+      secondary: "#fff",
+    },
+  },
+};
+
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
-        <RouterProvider router={Router}></RouterProvider>
+        <Toaster position="top-right" toastOptions={toasterOptions} />
+        <RouterProvider
+          router={Router}
+          future={{ v7_startTransition: true }} // Vite optimization for React 19
+        />
       </AuthProvider>
-      <ReactQueryDevtools initialIsOpen={false} />
+
+      <ReactQueryDevtools initialIsOpen={false} position="bottom" />
     </QueryClientProvider>
   </StrictMode>,
 );

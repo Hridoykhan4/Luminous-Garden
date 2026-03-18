@@ -3,70 +3,147 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
 
+@plugin "tailwindcss-animate";
 
 :root {
-  /* Clean White Background */
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.2 0.02 160); /* Deep charcoal green */
-
-  /* Shadcn Components */
+  /* --- Light Mode (Luminous / Organic) --- */
+  --background: oklch(0.99 0.005 160); /* Airy, almost white green */
+  --foreground: oklch(0.25 0.04 160);  /* Deep earthy charcoal */
+  
+  /* Neutral surfaces */
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2 0.02 160);
+  --card-foreground: var(--foreground);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.2 0.02 160);
+  --popover-foreground: var(--foreground);
 
-  /* Primary: Deep Forest Green */
-  --primary: oklch(0.35 0.08 160);
+  /* Primary: The Signature Garden Green */
+  --primary: oklch(0.45 0.12 160); 
   --primary-foreground: oklch(0.98 0.01 160);
 
-  /* Secondary: Soft Sage */
-  --secondary: oklch(0.95 0.03 160);
-  --secondary-foreground: oklch(0.35 0.08 160);
+  /* Secondary: Soft Mint (Used for tags, hover states) */
+  --secondary: oklch(0.92 0.04 160);
+  --secondary-foreground: oklch(0.3 0.1 160);
 
-  /* Muted & Borders */
-  --muted: oklch(0.96 0.01 160);
-  --muted-foreground: oklch(0.5 0.02 160);
-  --border: oklch(0.9 0.01 160);
+  /* Accents & UI States */
+  --accent: oklch(0.96 0.02 160);
+  --accent-foreground: var(--primary);
+  
+  --destructive: oklch(0.6 0.18 25);
+  --destructive-foreground: oklch(0.98 0.01 25);
+
+  /* Borders & Inputs */
+  --border: oklch(0.88 0.02 160 / 0.8);
   --input: oklch(0.9 0.01 160);
-  --ring: oklch(0.35 0.08 160);
-
-  --radius: 0.75rem;
+  --ring: var(--primary);
+  
+  --radius: 1rem; /* Softer, modern rounding */
 }
 
 .dark {
-  --background: oklch(0.15 0.02 160);
-  --foreground: oklch(0.95 0.01 160);
+  /* --- Dark Mode (Midnight Garden) --- */
+  --background: oklch(0.14 0.02 160);
+  --foreground: oklch(0.94 0.02 160);
+  
   --card: oklch(0.18 0.02 160);
-  --primary: oklch(0.85 0.08 160);
-  --primary-foreground: oklch(0.15 0.02 160);
-  --secondary: oklch(0.25 0.03 160);
-  --border: oklch(0.3 0.02 160 / 0.5);
+  --card-foreground: var(--foreground);
+  
+  --primary: oklch(0.78 0.14 160); /* Brightened for dark mode contrast */
+  --primary-foreground: oklch(0.15 0.04 160);
+
+  --secondary: oklch(0.22 0.04 160);
+  --secondary-foreground: oklch(0.85 0.08 160);
+
+  --accent: oklch(0.25 0.04 160);
+  --accent-foreground: var(--primary);
+
+  --border: oklch(0.32 0.02 160 / 0.5);
+  --ring: oklch(0.78 0.14 160);
 }
 
 @theme inline {
-  --font-sans: "Geist Variable", sans-serif;
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui;
+  
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted-foreground: oklch(0.5 0.02 160);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  
   --color-border: var(--border);
+  --color-input: var(--input);
   --color-ring: var(--ring);
+  
+  --radius-xl: calc(var(--radius) + 4px);
   --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  /* Custom Garden Animations */
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-pulse-slow: pulse-slow 4s ease-in-out infinite;
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  @keyframes pulse-slow {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.8; transform: scale(1.05); }
+  }
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border/60 outline-ring/30 selection:bg-primary/20 selection:text-primary;
   }
+  
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background text-foreground antialiased scroll-smooth;
+    font-feature-settings: "cv02", "cv03", "cv04", "ss01"; /* Optimized for Geist */
+  }
+
+  /* Custom scrollbar for a "premium" feel */
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/20 rounded-full hover:bg-muted-foreground/40 transition-colors;
   }
 }
 
 @layer components {
+  /* Layout Helper */
   .container-page {
-    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full;
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 w-full;
+  }
+
+  /* Glassmorphism Utility */
+  .glass {
+    @apply bg-card/40 backdrop-blur-xl border border-white/10 shadow-xl;
+  }
+
+  /* Interaction Utility */
+  .hover-lift {
+    @apply transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg active:scale-95;
+  }
+
+  /* Title Utility */
+  .title-gradient {
+    @apply bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent;
   }
 }

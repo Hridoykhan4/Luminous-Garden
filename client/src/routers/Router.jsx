@@ -1,57 +1,78 @@
+import { lazy, Suspense } from "react";
 import { createBrowserRouter } from "react-router";
 import MainLayout from "../layouts/MainLayout";
-import Home from "../pages/Home/Home";
 import ErrorPage from "../pages/ErrorPage/ErrorPage";
-import Login from "../pages/Login/Login";
-import SignUp from "../pages/SignUp/SignUp";
-import PlantDetails from "../pages/PlantDetails/PlantDetails";
+
 import PrivateRoute from "./PrivateRoute";
-import DashboardLayout from "../layouts/DashboardLayout";
-import Statistics from "../pages/Dashboard/Common/Statistics";
+import LoadingSpinner from "@/components/Shared/LoadingSpinner/LoadingSpinner";
+
+// ---  Lazy Loading Wrapper ---
+// eslint-disable-next-line no-unused-vars
+const Loadable = (Component) => (props) => (
+  <Suspense fallback={<LoadingSpinner />}>
+    <Component {...props} />
+  </Suspense>
+);
+
+// --- Lazy Imports ---
+const Home = Loadable(lazy(() => import("../pages/Home/Home")));
+const Login = Loadable(lazy(() => import("../pages/Login/Login")));
+const SignUp = Loadable(lazy(() => import("../pages/SignUp/SignUp")));
+const PlantDetails = Loadable(
+  lazy(() => import("../pages/PlantDetails/PlantDetails")),
+);
+const DashboardLayout = Loadable(
+  lazy(() => import("../layouts/DashboardLayout")),
+);
+const Statistics = Loadable(
+  lazy(() => import("../pages/Dashboard/Common/Statistics")),
+);
 
 const Router = createBrowserRouter([
   {
     path: "/",
-    element: <MainLayout></MainLayout>,
-    errorElement: <ErrorPage></ErrorPage>,
+    element: <MainLayout />,
+    errorElement: <ErrorPage />,
     children: [
       {
         index: true,
-        element: <Home></Home>,
+        element: <Home />,
       },
       {
-        path: "/plant/:id",
-        element: <PlantDetails></PlantDetails>,
+        path: "plant/:id",
+        element: <PlantDetails />,
       },
     ],
   },
   {
     path: "/login",
-    element: <Login></Login>,
+    element: <Login />,
   },
   {
     path: "/signup",
-    element: <SignUp></SignUp>,
+    element: <SignUp />,
   },
   {
     path: "/dashboard",
     element: (
       <PrivateRoute>
-        <DashboardLayout></DashboardLayout>
+        <DashboardLayout />
       </PrivateRoute>
     ),
     children: [
-        {
-            index: true,
-            element: <PrivateRoute>
-                <Statistics></Statistics>
-            </PrivateRoute>
-        },
-        {
-            path: 'add-plant',
-            element: 'Add'
-        }
-    ]
+      {
+        index: true,
+        element: <Statistics />,
+      },
+      {
+        path: "add-plant",
+        element: (
+          <div className="p-10 text-2xl font-bold">
+            Add Plant Coming Soon...
+          </div>
+        ),
+      },
+    ],
   },
 ]);
 
