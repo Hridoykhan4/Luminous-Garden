@@ -38,4 +38,8 @@ const syncUser = async (req, res, usersCollection) => {
   }
 };
 
-module.exports = { syncUser };
+const getUsers = async(req, res, usersCollection) => {
+  res.send(await usersCollection.find().toArray())
+}
+
+module.exports = { syncUser , getUsers};

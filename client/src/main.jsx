@@ -50,7 +50,7 @@ createRoot(document.getElementById("root")).render(
         <Toaster position="top-right" toastOptions={toasterOptions} />
         <RouterProvider
           router={Router}
-          future={{ v7_startTransition: true }} // Vite optimization for React 19
+          future={{ v7_startTransition: true }} 
         />
       </AuthProvider>
 

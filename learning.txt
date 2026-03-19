@@ -4,3 +4,28 @@ controllers/: The "Brains." This is where your logic (like checking isExist and 
 middlewares/: The "Security Guards." This is where your verifyToken lives.
 models/: The "Architects." (Mainly used with Mongoose, but for Native MongoDB, you can store your collection names here).
 config/: Where your MongoDB connection logic lives
+
+
+1. The Request: A user clicks "Sign Up" on your React app.
+
+2. Route: Hits server/routes/user.routes.js. It sees it's a POST request.
+
+3. Middleware: The guard checks if the user is a bot (optional).
+
+4. Controller: user.controller.js takes the data, checks if the email is in the DB, and saves the new user.
+
+5. Response: The Chef sends the "Meal" (the success message) back to the React app.
+
+
+Your Professional Checklist:
+[x] Routes: Traffic management.
+
+[x] Controllers: Request/Response logic.
+
+[x] Middlewares: Security & Guards.
+
+[x] Utils: Shared configs (Cookies).
+
+[ ] Services: (Optional but Pro) Database abstraction.
+
+[ ] Validation: (Optional but Pro) Checking data before it hits the DB.

@@ -132,6 +132,10 @@
     @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 w-full;
   }
 
+  .section-spacing {
+    @apply py-8 md:py-16 
+  }
+
   /* Glassmorphism Utility */
   .glass {
     @apply bg-card/40 backdrop-blur-xl border border-white/10 shadow-xl;
