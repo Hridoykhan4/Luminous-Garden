@@ -15,10 +15,7 @@ import useAxiosPublic from "@/hooks/useAxiosPublic";
 
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
-
-googleProvider.setCustomParameters({
-  prompt: "select_account",
-});
+googleProvider.setCustomParameters({ prompt: "select_account" });
 
 const AuthProvider = ({ children }) => {
   const axiosPublic = useAxiosPublic();
@@ -42,6 +39,7 @@ const AuthProvider = ({ children }) => {
 
   const logOut = async () => {
     setLoading(true);
+    sessionStorage.removeItem("isSynced");
     return signOut(auth);
   };
 
@@ -58,33 +56,21 @@ const AuthProvider = ({ children }) => {
 
       if (currentUser?.email) {
         const isSessionSynced = sessionStorage.getItem("isSynced");
-
         if (!isSessionSynced) {
           try {
-            const userInfo = {
-              name: currentUser.displayName,
-              email: currentUser.email,
-              photo: currentUser.photoURL,
-            };
-
-            // FIXED: One await for both, and added withCredentials
-            await Promise.all([
-              axiosPublic.post(
-                `/auth/jwt`,
-                { email: currentUser.email },
-                { withCredentials: true },
-              ),
-              axiosPublic.post(`/users`, userInfo),
-            ]);
-
+            await axiosPublic.post(
+              `/auth/jwt`,
+              { email: currentUser.email },
+              { withCredentials: true }
+            );
             sessionStorage.setItem("isSynced", "true");
           } catch (err) {
-            console.error("Auth Sync Error:", err);
+            console.error("JWT Security Sync Failed:", err);
           }
         }
       } else {
         sessionStorage.removeItem("isSynced");
-        await axiosPublic.get("/auth/logout", { withCredentials: true });
+        await axiosPublic.get("/auth/logout", { withCredentials: true }).catch(() => {});
       }
       setLoading(false);
     });
@@ -104,9 +90,7 @@ const AuthProvider = ({ children }) => {
     updateUserProfile,
   };
 
-  return (
-    <AuthContext.Provider value={authInfo}>{children}</AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={authInfo}>{children}</AuthContext.Provider>;
 };
 
 export default AuthProvider;

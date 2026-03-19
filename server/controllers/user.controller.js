@@ -1,45 +1,45 @@
 const syncUser = async (req, res, usersCollection) => {
-  try {
-    if (!usersCollection) {
-      return res
-        .status(500)
-        .json({ message: "Database collection not initialized" });
-    }
+  const { email, name, photo } = req.body;
 
-    const { email, name, photo } = req.body;
-    if (!email) return res.status(400).json({ message: "Email is required" });
+  if (!email) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Email is required" });
+  }
 
-    const isExist = await usersCollection.findOne({ email });
-
-    if (isExist) {
-      await usersCollection.updateOne(
-        { email },
-        { $set: { lastLoggedIn: new Date().toISOString() } },
-      );
-      return res.status(200).json({ message: "Welcome back!", exists: true });
-    }
-
-    const newUser = {
+  const query = { email };
+  const updateDoc = {
+    $set: {
       name,
-      email,
       photo,
+      lastLoggedIn: new Date().toISOString(),
+    },
+    $setOnInsert: {
       role: "customer",
       createdAt: new Date().toISOString(),
-      lastLoggedIn: new Date().toISOString(),
-    };
+      status: "active",
+    },
+  };
 
-    const result = await usersCollection.insertOne(newUser);
-    res.status(201).json(result);
-  } catch (error) {
-    console.error("DETAILED SERVER ERROR:", error); 
-    res
-      .status(500)
-      .json({ message: "Internal Server Error", error: error.message });
-  }
+  const options = { upsert: true, returnDocument: "after" };
+  const result = await usersCollection.findOneAndUpdate(
+    query,
+    updateDoc,
+    options,
+  );
+
+  const status = result.lastErrorObject?.updatedExisting ? 200 : 201;
+
+  res.status(status).json({
+    success: true,
+    message: "Identity Synced Successfully",
+    data: result.value || result,
+  });
 };
 
-const getUsers = async(req, res, usersCollection) => {
-  res.send(await usersCollection.find().toArray())
-}
+const getUsers = async (req, res, usersCollection) => {
+  const users = await usersCollection.find().toArray();
+  res.status(200).json(users);
+};
 
-module.exports = { syncUser , getUsers};
+module.exports = { syncUser, getUsers };

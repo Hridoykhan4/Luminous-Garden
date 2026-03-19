@@ -13,9 +13,11 @@ import useTogglePassword from "@/hooks/useTogglePassword";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import LuminousLogo from "@/components/Shared/LuminousLogo/LuminousLogo";
+import useAxiosPublic from "@/hooks/useAxiosPublic";
 
 const Login = () => {
   const navigate = useNavigate();
+  const axiosPublic = useAxiosPublic()
   const location = useLocation();
   const { showPass, togglePass, type } = useTogglePassword();
   const { signIn, signInWithGoogle, loading, setLoading, user } = useAuth();
@@ -51,11 +53,21 @@ const Login = () => {
 
   if (user) return <Navigate to={from} replace={true} />;
 
+  const syncUserToDatabase = async (firebaseUser) => {
+    const userInfo = {
+      name: firebaseUser.displayName,
+      email: firebaseUser.email,
+      photo: firebaseUser.photoURL,
+    };
+    await axiosPublic.post("/users", userInfo);
+  };
+
   // --- Submit Logic ---
   const onFormSubmit = async (data) => {
     try {
       setLoading(true);
-      await signIn(data.email, data.password);
+      const result = await signIn(data.email, data.password);
+      await syncUserToDatabase(result.user);
       toast.success("Welcome back to the Garden!");
       navigate(from, { replace: true });
     } catch (err) {
@@ -74,7 +86,8 @@ const Login = () => {
   const handleGoogleSignIn = async () => {
     try {
       setLoading(true);
-      await signInWithGoogle();
+      const result = await signInWithGoogle();
+      await syncUserToDatabase(result.user);
       toast.success("Identity Verified via Google");
       navigate(from, { replace: true });
     } catch (err) {

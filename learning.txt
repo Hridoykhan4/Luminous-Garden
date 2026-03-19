@@ -29,3 +29,21 @@ Your Professional Checklist:
 [ ] Services: (Optional but Pro) Database abstraction.
 
 [ ] Validation: (Optional but Pro) Checking data before it hits the DB.
+
+
+
+
+Think of Zod as the "Rule Book" and the Resolver as the "Translator" that tells React Hook Form how to read those rules.
+
+In a professional environment, you never trust user input. Zod is a library that allows you to create a "Blueprint" (Schema) for your data.
+
+It does three things in one shot:
+
+Validation: Checks if the data is valid (e.g., is the email actually an email?).
+
+Parsing: Converts data (e.g., converts a string "50" from an input field into a real number 50).
+
+Type Safety: If you use TypeScript, it automatically knows exactly what your data looks like, so you don't get "undefined" errors.
+
+
+> npx shadcn add textarea

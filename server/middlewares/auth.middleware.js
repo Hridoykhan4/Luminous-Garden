@@ -11,4 +11,9 @@ const verifyToken = (req, res, next) => {
   });
 };
 
+
+// const verifyAdmin = (req, res, next) => {
+//   const userRole = await 
+// }
+
 module.exports = { verifyToken };
