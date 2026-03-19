@@ -4,15 +4,15 @@ import {
   MdOutlineDashboardCustomize,
   MdOutlineAnalytics,
   MdAddBox,
-  MdOutlineSettings,
   MdHome,
 } from "react-icons/md";
+import { CiCamera } from "react-icons/ci";
 import { cn } from "@/lib/utils";
-import useAuth from "@/hooks/useAuth";
+// import useAuth from "@/hooks/useAuth";
 import LuminousLogo from "../components/Shared/LuminousLogo/LuminousLogo";
 
 const DashboardLayout = () => {
-  const { user } = useAuth();
+  //   const { user } = useAuth();
 
   // Logic: In a real MERN app, you'd fetch 'role' from your MongoDB user object
   // For now, let's assume you'll replace this with your actual role state
@@ -21,6 +21,7 @@ const DashboardLayout = () => {
   const navigation = useMemo(() => {
     const common = [
       { label: "Stats", to: "/dashboard", icon: MdOutlineAnalytics },
+      { label: "Profile", to: "/dashboard/profile", icon: CiCamera },
     ];
 
     const sellerLinks = [
@@ -48,7 +49,7 @@ const DashboardLayout = () => {
   return (
     <div className="relative min-h-screen bg-secondary/20 flex overflow-hidden font-sans">
       {/* --- DESKTOP SIDEBAR --- */}
-      <aside className="hidden md:flex w-64 flex-col bg-background border-r border-primary/5 p-6 space-y-8">
+      <aside className="hidden md:flex w-72 flex-col bg-background border-r border-primary/5 p-6 space-y-8">
         <div className="flex justify-center pb-4">
           <LuminousLogo />
         </div>
@@ -72,13 +73,13 @@ const DashboardLayout = () => {
 
       {/* --- MAIN CONTENT AREA --- */}
       <main className="flex-1 flex flex-col h-screen overflow-y-auto pb-24 md:pb-0">
-        {/* Header - Modern Glassmorphism */}
+        {/* Header  */}
         <header className="sticky top-0 z-30 w-full bg-background/60 backdrop-blur-md border-b border-primary/5 px-4 md:px-8 py-4 flex items-center justify-between">
           <h1 className="text-lg font-bold bg-linear-to-r from-primary to-emerald-600 bg-clip-text text-transparent">
             Luminous Dashboard
           </h1>
           <div className="flex items-center gap-4">
-            <span className="hidden sm:block text-xs font-medium px-2 py-1 bg-primary/10 text-primary rounded-full uppercase tracking-wider">
+            <span className=" text-xs font-medium px-2 py-1 bg-primary/10 text-primary rounded-full uppercase tracking-wider">
               {role}
             </span>
             {/* User Avatar could go here */}

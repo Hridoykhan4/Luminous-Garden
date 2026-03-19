@@ -128,7 +128,7 @@ const AddPlantForm = ({ onSubmit, uploadImage, setUploadImage, loading }) => {
                   <FormControl>
                     <Textarea
                       placeholder="Explain soil needs, sunlight, and watering..."
-                      className="min-h-[180px] rounded-2xl border-2 p-4 resize-none"
+                      className="min-h-45 rounded-2xl border-2 p-4 resize-none"
                       {...field}
                     />
                   </FormControl>
@@ -140,12 +140,12 @@ const AddPlantForm = ({ onSubmit, uploadImage, setUploadImage, loading }) => {
 
           {/* Right Side: Media & Pricing */}
           <div className="lg:col-span-5 space-y-6">
-            <div className="p-6 bg-secondary/20 rounded-[2rem] border-2 border-dashed border-secondary-foreground/10">
+            <div className="p-6 bg-secondary/20 rounded-4xl border-2 border-dashed border-secondary-foreground/10">
               <FormLabel className="text-xs font-bold uppercase tracking-widest text-primary mb-4 block">
                 Plant Cover Image
               </FormLabel>
               {!uploadImage.url ? (
-                <label className="flex flex-col items-center justify-center w-full h-52 bg-background border-2 border-dashed rounded-[1.5rem] cursor-pointer hover:bg-primary/5 hover:border-primary transition-all group">
+                <label className="flex flex-col items-center justify-center w-full h-52 bg-background border-2 border-dashed rounded-3xl cursor-pointer hover:bg-primary/5 hover:border-primary transition-all group">
                   <MdCloudUpload
                     size={48}
                     className="text-muted-foreground group-hover:text-primary transition-colors"
@@ -168,7 +168,7 @@ const AddPlantForm = ({ onSubmit, uploadImage, setUploadImage, loading }) => {
                   />
                 </label>
               ) : (
-                <div className="relative rounded-[1.5rem] overflow-hidden group aspect-video border-2">
+                <div className="relative rounded-3xl overflow-hidden group aspect-video border-2">
                   <img
                     src={uploadImage.url}
                     className="w-full h-full object-cover"
@@ -229,7 +229,7 @@ const AddPlantForm = ({ onSubmit, uploadImage, setUploadImage, loading }) => {
 
             <Button
               type="submit"
-              className="w-full h-16 rounded-2xl text-xl font-black shadow-xl hover:translate-y-[-2px] active:translate-y-[0px] transition-all"
+              className="w-full h-16 rounded-2xl text-xl font-black shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all"
               disabled={loading}
             >
               {loading ? (
