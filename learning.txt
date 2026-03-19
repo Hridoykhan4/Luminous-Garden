@@ -1,0 +1,6 @@
+Learning MVC pattern
+routes/: The "Traffic Police." They only define the URL paths and which controller to call.
+controllers/: The "Brains." This is where your logic (like checking isExist and new Date()) lives.
+middlewares/: The "Security Guards." This is where your verifyToken lives.
+models/: The "Architects." (Mainly used with Mongoose, but for Native MongoDB, you can store your collection names here).
+config/: Where your MongoDB connection logic lives

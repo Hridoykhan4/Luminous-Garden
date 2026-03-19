@@ -84,7 +84,6 @@ const AuthProvider = ({ children }) => {
         }
       } else {
         sessionStorage.removeItem("isSynced");
-        // Added withCredentials for logout too to clear the cookie properly
         await axiosPublic.get("/auth/logout", { withCredentials: true });
       }
       setLoading(false);

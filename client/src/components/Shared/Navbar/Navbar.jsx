@@ -45,7 +45,7 @@ const Navbar = () => {
     }`;
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-xl">
+    <header className="sticky  top-0 z-50 w-full border-b bg-background/80 backdrop-blur-xl">
       <div className="flex h-16 items-center justify-between container-page">
         <LuminousLogo />
 

@@ -38,6 +38,7 @@ async function run() {
   try {
     const db = client.db("luminous-garden");
     const usersCollection = db.collection("users");
+    const plantsCollection = db.collection('plants')
     // Add more collections as you grow (e.g., plantsCollection)
 
     // --- The Folder Connection ---

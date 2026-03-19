@@ -9,7 +9,6 @@ import Router from "./routers/Router";
 import AuthProvider from "./providers/AuthProvider";
 import "./index.css";
 
-// Force Light Mode on initialization
 document.documentElement.classList.remove("dark");
 document.documentElement.classList.add("light");
 
@@ -26,9 +25,9 @@ const queryClient = new QueryClient({
 
 const toasterOptions = {
   duration: 3000,
-  className: "glass", // Uses the glass class we made in index.css
+  className: "glass",
   style: {
-    background: "oklch(0.25 0.04 160 / 0.9)", // Matches your Deep Charcoal Green
+    background: "oklch(0.25 0.04 160 / 0.9)", 
     color: "oklch(0.98 0.01 160)",
     backdropFilter: "blur(10px)",
     border: "1px solid oklch(0.88 0.02 160 / 0.1)",
@@ -38,7 +37,7 @@ const toasterOptions = {
   },
   success: {
     iconTheme: {
-      primary: "oklch(0.45 0.12 160)", // Matches your Primary Garden Green
+      primary: "oklch(0.45 0.12 160)", 
       secondary: "#fff",
     },
   },

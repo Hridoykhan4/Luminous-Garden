@@ -7,8 +7,8 @@
 
 :root {
   /* --- Light Mode (Luminous / Organic) --- */
-  --background: oklch(0.99 0.005 160); /* Airy, almost white green */
-  --foreground: oklch(0.25 0.04 160);  /* Deep earthy charcoal */
+  --background: oklch(0.99 0.005 160); 
+  --foreground: oklch(0.25 0.04 160);  
   
   /* Neutral surfaces */
   --card: oklch(1 0 0);
@@ -36,7 +36,7 @@
   --input: oklch(0.9 0.01 160);
   --ring: var(--primary);
   
-  --radius: 1rem; /* Softer, modern rounding */
+  --radius: 1rem;
 }
 
 .dark {
@@ -47,7 +47,7 @@
   --card: oklch(0.18 0.02 160);
   --card-foreground: var(--foreground);
   
-  --primary: oklch(0.78 0.14 160); /* Brightened for dark mode contrast */
+  --primary: oklch(0.78 0.14 160); 
   --primary-foreground: oklch(0.15 0.04 160);
 
   --secondary: oklch(0.22 0.04 160);
@@ -111,7 +111,7 @@
   
   body {
     @apply bg-background text-foreground antialiased scroll-smooth;
-    font-feature-settings: "cv02", "cv03", "cv04", "ss01"; /* Optimized for Geist */
+    font-feature-settings: "cv02", "cv03", "cv04", "ss01"; 
   }
 
   /* Custom scrollbar for a "premium" feel */
@@ -144,6 +144,6 @@
 
   /* Title Utility */
   .title-gradient {
-    @apply bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent;
+    @apply bg-linear-to-br from-foreground to-foreground/60 bg-clip-text text-transparent;
   }
 }

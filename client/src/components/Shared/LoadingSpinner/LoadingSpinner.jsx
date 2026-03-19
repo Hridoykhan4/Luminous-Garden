@@ -13,7 +13,6 @@ const LoadingSpinner = () => {
       ease: "none",
     });
 
-    // Soothing Breathing effect
     gsap.to(logoRef.current, {
       scale: 1.1,
       opacity: 0.8,

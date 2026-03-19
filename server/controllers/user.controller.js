@@ -1,6 +1,5 @@
 const syncUser = async (req, res, usersCollection) => {
   try {
-    // Check if the collection actually exists
     if (!usersCollection) {
       return res
         .status(500)
@@ -32,7 +31,7 @@ const syncUser = async (req, res, usersCollection) => {
     const result = await usersCollection.insertOne(newUser);
     res.status(201).json(result);
   } catch (error) {
-    console.error("DETAILED SERVER ERROR:", error); // Look at your SERVER terminal for this!
+    console.error("DETAILED SERVER ERROR:", error); 
     res
       .status(500)
       .json({ message: "Internal Server Error", error: error.message });
