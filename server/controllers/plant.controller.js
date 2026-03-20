@@ -1,37 +1,31 @@
-const addPlant = async (req, res, plantsCollection) => {
+const asyncHandler = require("express-async-handler");
+
+const addPlant = asyncHandler(async (req, res, plantsCollection) => {
   const plantData = req.body;
 
-  if (!plantData.name || !plantData.price || !plantData.category) {
-    return res.status(400).json({
+  // Verify identity
+  if (plantData.seller?.email !== req.user?.email) {
+    return res.status(403).json({
       success: false,
-      message: "Required plant fields are missing (name, price, or category).",
+      message: "Unauthorized: Identity mismatch",
     });
   }
 
-  const newPlant = {
+  const result = await plantsCollection.insertOne({
     ...plantData,
-    price: parseFloat(plantData.price),
-    quantity: parseInt(plantData.quantity),
-    createdAt: new Date().toISOString(),
-    status: "available",
-  };
-
-  const result = await plantsCollection.insertOne(newPlant);
+    createdAt: new Date(),
+  });
 
   res.status(201).json({
     success: true,
     message: "Plant added to the Luminous Garden",
     insertedId: result.insertedId,
   });
-};
+});
 
-const getPlants = async (req, res, plantsCollection) => {
-  const category = req.query.category;
-  let query = {};
-
-  if (category) {
-    query = { category: category };
-  }
+const getPlants = asyncHandler(async (req, res, plantsCollection) => {
+  const { category } = req.query;
+  const query = category ? { category } : {};
 
   const plants = await plantsCollection
     .find(query)
@@ -39,6 +33,6 @@ const getPlants = async (req, res, plantsCollection) => {
     .toArray();
 
   res.status(200).json(plants);
-};
+});
 
 module.exports = { addPlant, getPlants };

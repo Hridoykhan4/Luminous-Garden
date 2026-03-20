@@ -1,7 +1,6 @@
 import axios from "axios";
 
 /**
- * Reusable Image Upload Utility
  * @param {File} file
  * @param {Function} uploadFn
  */

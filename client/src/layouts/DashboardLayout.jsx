@@ -92,7 +92,7 @@ const DashboardLayout = () => {
         </div>
       </main>
 
-      {/* --- MOBILE BOTTOM NAVIGATION (The "Boom" UX) --- */}
+      {/* --- MOBILE BOTTOM NAVIGATION  */}
       <nav className="md:hidden fixed bottom-4 left-4 right-4 z-50">
         <div className="bg-background/80 backdrop-blur-2xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.2)] rounded-2xl flex items-center justify-around p-2 transition-all">
           {navigation.map((item) => (
@@ -133,7 +133,7 @@ const DashboardLayout = () => {
   );
 };
 
-// Helper Component for Desktop Sidebar Links
+    
 const DashboardNavLink = ({ item }) => (
   <NavLink
     to={item.to}

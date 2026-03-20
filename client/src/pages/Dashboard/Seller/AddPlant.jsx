@@ -2,9 +2,9 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router";
 import AddPlantForm from "@/components/Form/AddPlantForm";
-import useAxiosSecure from "@/hooks/useAxiosSecure";
 import useAuth from "@/hooks/useAuth";
 import { imageUpload } from "@/api/utils";
+import useAxiosSecure from "@/hooks/useAxiosSecure";
 
 const AddPlant = () => {
   const { user } = useAuth();
@@ -35,9 +35,7 @@ const AddPlant = () => {
       toast.success("Plant listed successfully!", { id: toastId });
       navigate("/dashboard/my-plants");
     } catch (err) {
-      toast.error(err.response?.data?.message || "Something went wrong", {
-        id: toastId,
-      });
+      toast.error(err.response?.data?.message || "Something went wrong", { id: toastId });
     } finally {
       setLoading(false);
     }

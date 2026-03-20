@@ -8,7 +8,7 @@ const { MongoClient, ServerApiVersion } = require("mongodb");
 // Import Routes
 const authRoutes = require("./routes/auth.routes");
 const userRoutes = require("./routes/user.routes");
-const plantRoutes = require('./routes/plant.routes')
+const plantRoutes = require("./routes/plant.routes");
 
 const globalErrorHandler = require("./middlewares/error.middleware");
 const port = process.env.PORT || 5000;
@@ -46,7 +46,7 @@ async function run() {
     // --- The Folder Connection ---
     app.use("/users", userRoutes(usersCollection));
     app.use("/auth", authRoutes);
-    app.use('/plants', plantRoutes(plantsCollection))
+    app.use("/plants", plantRoutes(plantsCollection));
 
     console.log("Database connected and Routes initialized!");
   } finally {

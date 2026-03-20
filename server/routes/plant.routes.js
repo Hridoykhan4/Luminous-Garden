@@ -1,19 +1,18 @@
 const express = require("express");
-const { addPlants, getPlants } = require("../controllers/plant.controller");
+const router = express.Router();
+const { addPlant, getPlants } = require("../controllers/plant.controller");
 const { verifyToken } = require("../middlewares/auth.middleware");
+const validate = require("../middlewares/validate");
+const { plantSchema } = require("../shared/validation");
 
-const plantRoutes = (plantCollection) => {
-  const router = express.Router();
+module.exports = (plantsCollection) => {
+  // Pass the collection directly into the controller call
+  router.get("/", (req, res) => getPlants(req, res, plantsCollection));
 
-  router.post("/", (req, res, next) =>
-    addPlants(req, res, plantCollection).catch(next),
-  );
-
-  router.get("/",  verifyToken, (req, res, next) =>
-    getPlants(req, res, plantCollection).catch(next),
+  // FIX: Removed 'plantsCollection' from the (req, res) params list
+  router.post("/", verifyToken, validate(plantSchema), (req, res) =>
+    addPlant(req, res, plantsCollection),
   );
 
   return router;
 };
-
-module.exports = plantRoutes;

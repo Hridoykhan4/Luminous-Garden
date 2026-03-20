@@ -2,12 +2,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { TbFidgetSpinner } from "react-icons/tb";
-import {
-  MdCloudUpload,
-  MdClose,
-  MdAttachMoney,
-  MdOutlineDescription,
-} from "react-icons/md";
+import { MdCloudUpload, MdClose, MdAttachMoney } from "react-icons/md";
 import { HiOutlineIdentification } from "react-icons/hi2";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -102,7 +97,7 @@ const AddPlantForm = ({ onSubmit, uploadImage, setUploadImage, loading }) => {
                         <SelectValue placeholder="Select a category" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent className="rounded-xl">
+                    <SelectContent className="rounded-xl bg-white">
                       {["Indoor", "Outdoor", "Succulent", "Flowering"].map(
                         (cat) => (
                           <SelectItem key={cat} value={cat}>
