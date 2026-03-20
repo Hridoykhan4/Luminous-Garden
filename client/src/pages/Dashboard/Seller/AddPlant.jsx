@@ -13,36 +13,55 @@ const AddPlant = () => {
   const [loading, setLoading] = useState(false);
   const [uploadImage, setUploadImage] = useState({ image: null, url: null });
 
-  const onSubmit = async (data) => {
+  const onSubmit = async (formData) => {
+    // 1. Pre-flight checks
     if (!uploadImage.image) return toast.error("Please upload a plant image!");
+    if (!user?.email)
+      return toast.error("User context missing. Please re-login.");
 
     setLoading(true);
-    const toastId = toast.loading("Listing your plant...");
-    try {
-      const imageUrl = await imageUpload(uploadImage.image);
+    const toastId = toast.loading("Securely uploading specimen...");
 
+    try {
+      // 2. Image Upload
+      const imageUrl = await imageUpload(uploadImage.image);
+      console.log("Image Uploaded:", imageUrl);
+
+      // 3. MANUAL MAPPING (No spreading)
       const plantData = {
-        ...data,
+        name: formData.name,
+        category: formData.category,
+        description: formData.description,
+        price: parseFloat(formData.price),
+        quantity: parseInt(formData.quantity),
         image: imageUrl,
         seller: {
-          name: user?.displayName,
-          image: user?.photoURL,
+          name: user?.displayName || "Anonymous",
+          image: user?.photoURL || "",
           email: user?.email,
         },
       };
 
-      await axiosSecure.post("/plants", plantData);
-      toast.success("Plant listed successfully!", { id: toastId });
-      navigate("/dashboard/my-plants");
+      console.log("Payload to Server:", plantData);
+
+      // 4. API Call
+      const { data } = await axiosSecure.post("/plants", plantData);
+
+      if (data.insertedId) {
+        toast.success("Plant added successfully!", { id: toastId });
+        navigate("/dashboard/my-plants");
+      }
     } catch (err) {
-      toast.error(err.response?.data?.message || "Something went wrong", { id: toastId });
+      console.error("Submission Error:", err);
+      toast.error(err.response?.data?.message || "Failed to list plant", {
+        id: toastId,
+      });
     } finally {
       setLoading(false);
     }
   };
-
   return (
-    <div className="p-6">
+    <div className="min-h-screen bg-neutral-50/50 p-4 md:p-10">
       <AddPlantForm {...{ onSubmit, uploadImage, setUploadImage, loading }} />
     </div>
   );
