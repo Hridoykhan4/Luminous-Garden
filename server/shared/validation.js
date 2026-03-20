@@ -8,8 +8,6 @@ const plantSchema = z.object({
     .min(20, "Provide a detailed description (min 20 chars)"),
   price: z.coerce.number().positive("Price must be > 0"),
   quantity: z.coerce.number().int().min(1, "Quantity must be 1+"),
-
-  // THE MISSING PIECES:
   image: z.string().url("Invalid image URL"),
   seller: z.object({
     name: z.string().min(1, "Seller name required"),
