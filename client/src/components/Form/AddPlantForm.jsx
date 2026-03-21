@@ -57,9 +57,9 @@ const AddPlantForm = ({ onSubmit, uploadImage, setUploadImage, loading }) => {
     },
   });
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const watched = form.watch();
 
-  // Helper to sync quantity manually for the custom stepper
   const updateQuantity = (val) => {
     const current = form.getValues("quantity");
     const next = Math.max(1, current + val);
