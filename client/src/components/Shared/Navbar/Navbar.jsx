@@ -137,7 +137,7 @@ const Navbar = () => {
                 </Button>
               </DropdownMenuTrigger>
 
-              <DropdownMenuContent align="end" className="w-60 p-2">
+              <DropdownMenuContent align="end" className="w-60 p-2 bg-white/90 z-1000 backdrop-blur-3xl">
                 <DropdownMenuLabel className="font-normal p-2">
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-bold leading-none">

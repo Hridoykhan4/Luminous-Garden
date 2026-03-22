@@ -4,7 +4,6 @@ import useAuth from "@/hooks/useAuth";
 import SectionTitle from "@/components/Shared/SectionTitle/SectionTitle";
 import { Button } from "@/components/ui/button";
 import { TbArrowRight } from "react-icons/tb";
-
 const Plants = lazy(() => import("../../components/Home/Plants"));
 
 const Home = () => {
@@ -12,7 +11,7 @@ const Home = () => {
 
   return (
     <main className="relative">
-      <div className="container-page space-y-24 pb-32">
+      <div className="container-page space-y-10 sm:space-y-16 pb-32">
         {/* HERO: The Entry Point */}
         <Hero />
 
@@ -59,6 +58,7 @@ const Home = () => {
             </div>
           )}
         </section>
+        
       </div>
     </main>
   );
