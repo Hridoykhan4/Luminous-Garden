@@ -53,7 +53,7 @@ const AuthProvider = ({ children }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
-
+      console.log('Bortoman', currentUser);
       if (currentUser?.email) {
         const isSessionSynced = sessionStorage.getItem("isSynced");
         if (!isSessionSynced) {

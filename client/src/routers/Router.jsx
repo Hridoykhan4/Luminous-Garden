@@ -18,6 +18,7 @@ const Loadable = (Component) => (props) => (
 const Home = Loadable(lazy(() => import("../pages/Home/Home")));
 const Login = Loadable(lazy(() => import("../pages/Login/Login")));
 const SignUp = Loadable(lazy(() => import("../pages/SignUp/SignUp")));
+const Plants = Loadable(lazy(() => import("../pages/Plants/Plants")));
 const AddPlant = Loadable(
   lazy(() => import("../pages/Dashboard/Seller/AddPlant")),
 );
@@ -44,6 +45,10 @@ const Router = createBrowserRouter([
       {
         path: "plant/:id",
         element: <PlantDetails />,
+      },
+      {
+        path: "/plants",
+        element: <Plants></Plants>,
       },
     ],
   },

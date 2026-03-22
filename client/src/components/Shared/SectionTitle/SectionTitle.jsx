@@ -52,7 +52,7 @@ const SectionTitle = ({ heading, subheading }) => {
   );
 
   return (
-    <div ref={container} className="mb-12 md:mb-20 group">
+    <div ref={container} className="mb-10 md:mb-16 group">
       {/* 1. PRIMARY HEADING (The Hook) */}
       <div className="flex items-center gap-5 overflow-visible mb-3">
         <h2 className="main-title text-5xl md:text-7xl font-black tracking-tighter title-gradient leading-tight">

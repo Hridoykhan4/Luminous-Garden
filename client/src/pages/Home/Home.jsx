@@ -1,64 +1,73 @@
-import { Suspense, lazy } from "react";
+import { useRef } from "react";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 import Hero from "@/components/Home/Hero";
-import useAuth from "@/hooks/useAuth";
 import SectionTitle from "@/components/Shared/SectionTitle/SectionTitle";
-import { Button } from "@/components/ui/button";
-import { TbArrowRight } from "react-icons/tb";
-const Plants = lazy(() => import("../../components/Home/Plants"));
+import PlantSkeleton from "@/components/Shared/PlantSkeleton/PlantSkeleton";
+import usePlants from "@/hooks/usePlants";
+import PlantCard from "@/components/Shared/PlantCard";
+import LuminousButton from "@/components/Shared/LuminousButton/LuminousButton";
+
 
 const Home = () => {
-  const { user } = useAuth();
+  const { data: plants, isLoading } = usePlants();
+  const container = useRef(null);
+  const featuredPlants = plants?.slice(0, 8) || [];
+
+  useGSAP(
+    () => {
+      if (!isLoading && featuredPlants.length > 0) {
+        gsap.from(".plant-card-wrapper", {
+          y: 50,
+          opacity: 0,
+          stagger: 0.1,
+          duration: 0.8,
+          ease: "expo.out",
+          clearProps: "all", 
+        });
+      }
+    },
+    { dependencies: [isLoading], scope: container },
+  );
 
   return (
-    <main className="relative">
-      <div className="container-page space-y-10 sm:space-y-16 pb-32">
-        {/* HERO: The Entry Point */}
+    <main ref={container} className="relative">
+      <div className="container-page pb-20">
         <Hero />
 
-        {/* PLANTS GRID */}
         <section id="explore" className="section-spacing">
           <SectionTitle
             heading="Curated Inventory"
             subheading="Verified botanical specimens from local growers."
           />
-          <Suspense
-            fallback={
-              <div className="h-96 w-full animate-pulse bg-muted/20 rounded-3xl" />
-            }
-          >
-            <Plants />
-          </Suspense>
-        </section>
 
-        {/* ROLE BASED CTA */}
-        <section className="section-spacing">
-          {!user || user?.role === "customer" ? (
-            <div className="bg-foreground rounded-[3rem] p-12 text-center text-background relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-80 h-80 bg-primary/20 rounded-full blur-[100px]" />
-              <h2 className="text-5xl font-black mb-6 italic tracking-tighter">
-                Start Your <span className="text-primary">Nursery Empire.</span>
-              </h2>
-              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground px-10 py-8 rounded-2xl font-black text-lg shadow-2xl transition-all hover-lift">
-                Become a Seller <TbArrowRight className="ml-2" size={24} />
-              </Button>
-            </div>
+          {isLoading ? (
+            <PlantSkeleton />
           ) : (
-            <div className="glass rounded-[3.5rem] p-12 flex flex-col md:flex-row items-center justify-between">
-              <div className="space-y-2">
-                <h2 className="text-4xl font-black tracking-tight italic">
-                  Inventory Manager
-                </h2>
-                <p className="text-muted-foreground font-medium italic">
-                  Monitor your nursery's performance across Bangladesh.
-                </p>
-              </div>
-              <Button className="mt-8 md:mt-0 bg-primary hover:bg-primary/90 text-primary-foreground px-10 py-7 rounded-2xl font-black">
-                Seller Dashboard
-              </Button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+              {featuredPlants.map((plant) => (
+                // Wrapper div to handle the entrance animation safely
+                <div key={plant._id} className="plant-card-wrapper">
+                  <PlantCard plant={plant} />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Dynamic Action Area */}
+          {!isLoading && plants?.length > 8 && (
+            <div className="mt-20 flex flex-col items-center gap-6">
+              <LuminousButton to="/plants">
+                Explore Full Marketplace
+              </LuminousButton>
+
+              <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-[0.3em]">
+                Showing {featuredPlants.length} of {plants.length} available
+                specimens
+              </p>
             </div>
           )}
         </section>
-        
       </div>
     </main>
   );

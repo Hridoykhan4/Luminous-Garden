@@ -11,11 +11,18 @@ const addPlant = asyncHandler(async (req, res, plantsCollection) => {
   console.log("--- DEBUG END ---");
 
   if (!plantData.seller?.email) {
-    return res.status(400).json({ success: false, message: "Seller email is missing in request body" });
+    return res
+      .status(400)
+      .json({
+        success: false,
+        message: "Seller email is missing in request body",
+      });
   }
 
   if (plantData.seller.email !== req.user.email) {
-    return res.status(403).json({ success: false, message: "Forbidden: Identity Mismatch" });
+    return res
+      .status(403)
+      .json({ success: false, message: "Forbidden: Identity Mismatch" });
   }
 
   const result = await plantsCollection.insertOne({
@@ -26,9 +33,15 @@ const addPlant = asyncHandler(async (req, res, plantsCollection) => {
   res.status(201).json({ success: true, insertedId: result.insertedId });
 });
 const getPlants = asyncHandler(async (req, res, plantsCollection) => {
-  const { category } = req.query;
-  const query = category ? { category } : {};
+  const { category, email } = req.query;
 
+  let query = {};
+  if (email) {
+    query["seller.email"] = email;
+  }
+  if (category) {
+    query.category = category;
+  }
   const plants = await plantsCollection
     .find(query)
     .sort({ createdAt: -1 })

@@ -1,5 +1,9 @@
 const express = require("express");
-const { syncUser, getUsers } = require("../controllers/user.controller");
+const {
+  syncUser,
+  getUsers,
+  getUserRole,
+} = require("../controllers/user.controller");
 
 const userRoutes = (usersCollection) => {
   const router = express.Router();
@@ -10,6 +14,10 @@ const userRoutes = (usersCollection) => {
 
   router.get("/", (req, res, next) =>
     getUsers(req, res, usersCollection).catch(next),
+  );
+
+  router.get("/role/:email", (req, res, next) =>
+    getUserRole(req, res, usersCollection).catch(next),
   );
 
   return router;
