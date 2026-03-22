@@ -1,15 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
 import useAxiosPublic from "./useAxiosPublic";
 
-const usePlants = (email = "") => {
+const usePlants = (email = "", limit=0) => {
   const axiosPublic = useAxiosPublic();
 
   return useQuery({
-    queryKey: ["plants", email],
+    queryKey: ["plants", email, limit],
     queryFn: async () => {
-      const url = email ? `/plants?email=${email}` : "/plants";
-      const { data } = await axiosPublic.get(url);
-      return data;
+      const params = new URLSearchParams()  
+      if (email) params.append("email", email);
+      if (limit) params.append("limit", limit);
+
+      const { data } = await axiosPublic.get(`/plants?${params.toString()}`);
+      return data
     },
     staleTime: 1000 * 60 * 5,
   });

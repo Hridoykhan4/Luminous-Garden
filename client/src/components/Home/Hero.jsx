@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import { useRef } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -5,31 +6,78 @@ import useAuth from "@/hooks/useAuth";
 import ActionLinks from "../Shared/ActionLinks/ActionLinks";
 import heroImg from "../../assets/images/heroImg.webp";
 import useUserRole from "@/hooks/useUserRole";
+
 const Hero = () => {
   const { loading: authLoading } = useAuth();
-  const {role, isRoleLoading} = useUserRole();
+  const { role, isRoleLoading } = useUserRole();
   const container = useRef(null);
   const plantRef = useRef(null);
   const isSyncing = authLoading || isRoleLoading;
 
   useGSAP(
-    () => {
+    (context) => {
       const tl = gsap.timeline({
-        defaults: { ease: "expo.out", duration: 1.2 },
+        defaults: { ease: "expo.out", duration: 2 },
       });
 
-      tl.from(".hero-text", { y: 100, opacity: 0, stagger: 0.1 })
-        .from(".hero-visual", { scale: 0.8, opacity: 0, x: 40 }, "-=0.8")
-        .from(".floating-card", { opacity: 0, y: 20 }, "-=0.4");
+      // 1. Initial Reveal
+      tl.from(".hero-badge", { y: 20, opacity: 0, duration: 1 })
+        .from(
+          ".hero-title",
+          {
+            y: 120,
+            rotation: 5,
+            opacity: 0,
+            stagger: 0.2,
+            skewY: 7,
+          },
+          "-=0.8",
+        )
+        .from(".hero-desc", { y: 20, opacity: 0 }, "-=1.2")
+        .from(
+          ".hero-visual",
+          {
+            clipPath: "inset(100% 0% 0% 0%)", 
+            scale: 1.2,
+            opacity: 0,
+          },
+          "-=1.5",
+        )
+        .from(".floating-card", { x: 50, opacity: 0, blur: "10px" }, "-=1");
 
-      // Infinite float
+      // 2. Infinite Float
       gsap.to(plantRef.current, {
-        y: -20,
+        y: -30,
+        rotation: 2,
         duration: 4,
         repeat: -1,
         yoyo: true,
         ease: "sine.inOut",
       });
+
+      // 3. Interactive Mouse Parallax
+      const handleMouseMove = (e) => {
+        const { clientX, clientY } = e;
+        const xPos = (clientX / window.innerWidth - 0.5) * 40;
+        const yPos = (clientY / window.innerHeight - 0.5) * 40;
+
+        gsap.to(".parallax-bg", {
+          x: xPos,
+          y: yPos,
+          duration: 1,
+          ease: "power2.out",
+        });
+
+        gsap.to(".floating-card", {
+          x: -xPos * 0.5,
+          y: -yPos * 0.5,
+          duration: 1.5,
+          ease: "power2.out",
+        });
+      };
+
+      window.addEventListener("mousemove", handleMouseMove);
+      return () => window.removeEventListener("mousemove", handleMouseMove);
     },
     { scope: container },
   );
@@ -37,67 +85,98 @@ const Hero = () => {
   return (
     <section
       ref={container}
-      className="relative min-h-[90vh] flex items-center pt-8 md:pt-16  overflow-hidden"
+      className="relative min-h-screen flex items-center section-spacing overflow-hidden"
     >
-      <div className="absolute top-[-10%] right-[-5%] -z-10 w-full max-w-3xl aspect-square bg-primary/5 rounded-full blur-[140px]" />
-      <div className="absolute bottom-[-10%] left-[-5%] -z-10 w-full max-w-xl aspect-square bg-secondary/20 rounded-full blur-[100px]" />
+      <div className="parallax-bg absolute inset-0 -z-10">
+        <div className="absolute top-[-20%] right-[-10%] w-150 h-150 bg-primary/10 rounded-full blur-[160px] animate-pulse-slow" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-100 h-100 bg-secondary/30 rounded-full blur-[140px]" />
+      </div>
 
-      <div className="grid lg:grid-cols-12 gap-12 items-center">
-        <div className="lg:col-span-7 space-y-10">
-          <div className="hero-text overflow-hidden">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20">
-              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-ping" />
-              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-primary">
-                Global Specimen Hub
+      <div className="container-page grid lg:grid-cols-12 gap-16 items-center">
+        <div className="lg:col-span-7 space-y-8 z-10">
+          <div className="hero-badge overflow-hidden">
+            <div className="inline-flex items-center gap-3 px-4 py-2 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+              </span>
+              <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/80">
+                Live Botanical Marketplace
               </span>
             </div>
           </div>
 
-          <h1 className="hero-text text-7xl md:text-[10rem] font-black tracking-[ -0.05em] leading-[0.8] title-gradient">
-            Evolve <br />
-            <span className="italic font-light text-primary">Nature.</span>
-          </h1>
+          <div className="space-y-4">
+            <h1 className="hero-title text-8xl md:text-[11rem] font-black tracking-[-0.06em] leading-[0.75] title-gradient">
+              Evolve <br />
+              <span className="italic font-extralight text-primary opacity-90">
+                Nature.
+              </span>
+            </h1>
+          </div>
 
-          <p className="hero-text text-muted-foreground text-lg md:text-xl font-medium max-w-lg leading-relaxed">
-            Premium botanical assets for the modern collector. Secure your rare
-            specimen through Bangladesh’s most advanced nursery network.
+          <p className="hero-desc text-muted-foreground text-lg md:text-2xl font-medium max-w-xl leading-relaxed">
+            Curating rare organic assets for digital-first collectors. Connect
+            with premium nurseries across{" "}
+            <span className="text-foreground font-bold underline decoration-primary/30">
+              Bangladesh
+            </span>
+            .
           </p>
 
-          <div className="hero-text pt-6">
+          <div className="hero-desc pt-8">
             {isSyncing ? (
-              <div className="h-14 w-40 bg-primary/10 rounded-2xl animate-pulse border border-primary/20" />
+              <div className="h-16 w-48 bg-primary/10 rounded-3xl animate-pulse border border-primary/20" />
             ) : (
               <ActionLinks role={role} isRoleLoading={isRoleLoading} />
             )}
           </div>
         </div>
 
-        <div className="lg:col-span-5 relative hero-visual">
-          <div className="relative z-10 w-full flex justify-center lg:justify-end">
+        {/* RIGHT VISUAL */}
+        <div className="lg:col-span-5 relative">
+          <div className="hero-visual relative z-10 w-full flex justify-center lg:justify-end">
             <img
               ref={plantRef}
               src={heroImg}
               alt="Premium Specimen"
-              className="w-full max-w-md md:max-w-full drop-shadow-[0_40px_80px_rgba(0,0,0,0.1)]"
+              className="w-full max-w-lg rounded-2xl md:max-w-full drop-shadow-[0_50px_100px_rgba(0,0,0,0.15)] filter saturate-[1.1]"
             />
           </div>
 
-          <div className="floating-card glass absolute -bottom-3  md:-left-10 p-6 rounded-4xl border-white/20 z-20">
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-primary" />
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                  Verification
+          {/* NEXT-WORLD FLOATING CARD */}
+          <div className="floating-card glass absolute -bottom-10 md:-left-16 p-8 rounded-[3rem] border-white/20 z-20 shadow-2xl">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-3 h-3 rounded-full bg-primary shadow-[0_0_15px_rgba(var(--primary),0.5)]" />
+                <span className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+                  Growth Certified
                 </span>
               </div>
-              <p className="text-xl font-black italic text-foreground leading-none">
-                100% Organic
-              </p>
-              <div className="pt-2 border-t border-border/50">
-                <p className="text-[10px] font-bold text-primary uppercase leading-none">
-                  Market Demand
+
+              <div className="space-y-1">
+                <p className="text-3xl font-black italic text-foreground leading-none">
+                  100% Organic
                 </p>
-                <p className="text-lg font-black text-foreground">Extreme</p>
+                <p className="text-[10px] font-bold text-primary/60 uppercase">
+                  Verified by PCIU Labs
+                </p>
+              </div>
+
+              <div className="pt-4 border-t border-white/10 flex justify-between items-center gap-8">
+                <div>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase">
+                    Demand
+                  </p>
+                  <p className="text-xl font-black text-foreground">Peak</p>
+                </div>
+                <div className="h-10 w-[1px] bg-white/10" />
+                <div>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase">
+                    Rarity
+                  </p>
+                  <p className="text-xl font-black text-primary">Mythic</p>
+                </div>
               </div>
             </div>
           </div>

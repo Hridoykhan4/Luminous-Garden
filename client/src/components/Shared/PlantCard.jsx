@@ -130,7 +130,7 @@ const PlantCard = ({ plant }) => {
                 <TbShoppingCart className="text-lg" />
                 {isOutOfStock ? "Wishlist" : "Acquire"}
               </LuminousButton>
-              <Link to={`/plant/${plant._id }`} className="w-14 h-14 flex items-center justify-center bg-secondary/50 rounded-2xl border border-border/50 hover:text-primary hover:border-primary/30 transition-all active:scale-90">
+              <Link to={`/plants/${plant._id}`}  className="w-14 h-14 flex items-center justify-center bg-secondary/50 rounded-2xl border border-border/50 hover:text-primary hover:border-primary/30 transition-all active:scale-90">
                 <TbEye className="text-xl" />
               </Link>
             </div>

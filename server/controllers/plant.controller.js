@@ -1,4 +1,5 @@
 const asyncHandler = require("express-async-handler");
+const { ObjectId } = require("mongodb");
 
 const addPlant = asyncHandler(async (req, res, plantsCollection) => {
   const plantData = req.body;
@@ -11,12 +12,10 @@ const addPlant = asyncHandler(async (req, res, plantsCollection) => {
   console.log("--- DEBUG END ---");
 
   if (!plantData.seller?.email) {
-    return res
-      .status(400)
-      .json({
-        success: false,
-        message: "Seller email is missing in request body",
-      });
+    return res.status(400).json({
+      success: false,
+      message: "Seller email is missing in request body",
+    });
   }
 
   if (plantData.seller.email !== req.user.email) {
@@ -32,22 +31,53 @@ const addPlant = asyncHandler(async (req, res, plantsCollection) => {
 
   res.status(201).json({ success: true, insertedId: result.insertedId });
 });
+
 const getPlants = asyncHandler(async (req, res, plantsCollection) => {
-  const { category, email } = req.query;
+  const { category, email, search, limit } = req.query;
 
   let query = {};
-  if (email) {
-    query["seller.email"] = email;
+  if (email) query["seller.email"] = email;
+  if (category) query.category = category;
+  if (search) {
+    query.name = { $regex: search, $options: "i" };
   }
-  if (category) {
-    query.category = category;
-  }
+  const lim = parseInt(limit) || 0;
+
   const plants = await plantsCollection
     .find(query)
     .sort({ createdAt: -1 })
+    .limit(lim)
     .toArray();
 
-  res.status(200).json(plants);
+  const totalCount = await plantsCollection.countDocuments(query);
+
+  res.status(200).json({
+    success: true,
+    count: totalCount,
+    data: plants,
+  });
 });
 
-module.exports = { addPlant, getPlants };
+const getSinglePlant = asyncHandler(async (req, res, plantsCollection) => {
+  const id = req.params.id;
+  if (!ObjectId.isValid(id)) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid Specimen ID" });
+  }
+
+  const plant = await plantsCollection.findOne({ _id: new ObjectId(id) });
+
+  if (!plant) {
+    return res
+      .status(404)
+      .json({ success: false, message: "Specimen not found" });
+  }
+
+  res.status(200).json({
+    success: true,
+    data: plant,
+  });
+});
+
+module.exports = { addPlant, getPlants, getSinglePlant };

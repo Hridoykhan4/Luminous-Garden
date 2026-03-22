@@ -6,7 +6,7 @@ const Plants = () => {
   const { data: plants = [], isLoading: plantsLoading } = usePlants();
   if (plantsLoading) return <PlantSkeleton></PlantSkeleton>;
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+    <div className="grid section-spacing grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
       {plants.map((plant) => (
         <PlantCard key={plant._id} plant={plant} />
       ))}

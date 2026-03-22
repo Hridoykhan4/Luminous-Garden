@@ -97,6 +97,7 @@ const Navbar = () => {
           <nav className="hidden md:flex items-center gap-8">
             {navLinks.map((link, idx) => (
               <NavLink
+                end
                 key={link.to}
                 to={link.to}
                 ref={(el) => (linksRef.current[idx] = el)}
@@ -112,7 +113,7 @@ const Navbar = () => {
                 <span
                   className={cn(
                     "absolute -bottom-5.5 left-0 h-0.5 w-0 bg-primary transition-all duration-300 group-hover:w-full",
-                    "active-nav-indicator", 
+                    "active-nav-indicator",
                   )}
                 />
               </NavLink>
@@ -137,7 +138,10 @@ const Navbar = () => {
                 </Button>
               </DropdownMenuTrigger>
 
-              <DropdownMenuContent align="end" className="w-60 p-2 bg-white/90 z-1000 backdrop-blur-3xl">
+              <DropdownMenuContent
+                align="end"
+                className="w-60 p-2 bg-white/90 z-1000 backdrop-blur-3xl"
+              >
                 <DropdownMenuLabel className="font-normal p-2">
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-bold leading-none">
@@ -223,6 +227,7 @@ const MobileNav = ({ navLinks, user }) => (
       <div className="flex flex-col gap-4 mt-8 grow">
         {navLinks.map((link) => (
           <NavLink
+            end
             key={link.to}
             to={link.to}
             className={({ isActive }) =>
