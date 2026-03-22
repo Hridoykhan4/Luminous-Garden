@@ -4,6 +4,7 @@ import { TbEdit, TbTrash, TbShoppingCart, TbEye, TbLeaf } from "react-icons/tb";
 import useUserRole from "@/hooks/useUserRole";
 import useAuth from "@/hooks/useAuth";
 import LuminousButton from "./LuminousButton/LuminousButton";
+import { Link } from "react-router";
 
 
 const PlantCard = ({ plant }) => {
@@ -124,13 +125,14 @@ const PlantCard = ({ plant }) => {
                 className="flex-1"
                 onClick={() => console.log("Add to Cart")}
                 disabled={isOutOfStock}
+                
               >
                 <TbShoppingCart className="text-lg" />
                 {isOutOfStock ? "Wishlist" : "Acquire"}
               </LuminousButton>
-              <button className="w-14 h-14 flex items-center justify-center bg-secondary/50 rounded-2xl border border-border/50 hover:text-primary hover:border-primary/30 transition-all active:scale-90">
+              <Link to={`/plant/${plant._id }`} className="w-14 h-14 flex items-center justify-center bg-secondary/50 rounded-2xl border border-border/50 hover:text-primary hover:border-primary/30 transition-all active:scale-90">
                 <TbEye className="text-xl" />
-              </button>
+              </Link>
             </div>
           )}
         </div>

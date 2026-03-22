@@ -90,9 +90,10 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
 
-  /* Custom Garden Animations */
+  /* Custom Garden Animations Keys */
   --animate-float: float 6s ease-in-out infinite;
   --animate-pulse-slow: pulse-slow 4s ease-in-out infinite;
+  --animate-shimmer-sweep: shimmer 2s infinite;
 
   @keyframes float {
     0%, 100% { transform: translateY(0); }
@@ -103,27 +104,9 @@
     50% { opacity: 0.8; transform: scale(1.05); }
   }
   @keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
-}
-
-.animate-shimmer {
-  position: relative;
-  overflow: hidden;
-}
-
-.animate-shimmer::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.05),
-    transparent
-  );
-  animation: shimmer 2s infinite;
-}
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
 }
 
 @layer base {
@@ -155,7 +138,7 @@
   }
 
   .section-spacing {
-    @apply py-8 md:py-16 
+    @apply py-8 md:py-16;
   }
 
   /* Glassmorphism Utility */
@@ -172,5 +155,21 @@
   .title-gradient {
     @apply bg-linear-to-br from-foreground to-foreground/60 bg-clip-text text-transparent;
   }
-  
+
+  /* --- World-Class Shimmer Logic --- */
+  .animate-shimmer {
+    @apply relative overflow-hidden;
+  }
+
+  .animate-shimmer::after {
+    content: "";
+    @apply absolute inset-0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.08),
+      transparent
+    );
+    animation: shimmer 2s infinite;
+  }
 }

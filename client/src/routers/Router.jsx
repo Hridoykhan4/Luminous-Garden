@@ -5,6 +5,7 @@ import ErrorPage from "../pages/ErrorPage/ErrorPage";
 
 import PrivateRoute from "./PrivateRoute";
 import LoadingSpinner from "@/components/Shared/LoadingSpinner/LoadingSpinner";
+import ManageUsers from "@/pages/Dashboard/Admin/ManageUsers/ManageUsers";
 
 // ---  Lazy Loading Wrapper ---
 // eslint-disable-next-line no-unused-vars
@@ -75,6 +76,12 @@ const Router = createBrowserRouter([
       {
         path: "add-plant",
         element: <AddPlant></AddPlant>,
+      },
+
+      // Admin Routes
+      {
+        path: "manage-users",
+        element: <ManageUsers></ManageUsers>,
       },
     ],
   },

@@ -1,9 +1,17 @@
+import PlantCard from "@/components/Shared/PlantCard";
+import PlantSkeleton from "@/components/Shared/PlantSkeleton/PlantSkeleton";
+import usePlants from "@/hooks/usePlants";
+
 const Plants = () => {
-    return (
-        <section className="container-page section-spacing">
-    Plants Lorem ipsum dolor sit amet consectetur adipisicing elit. Accusamus quibusdam assumenda aperiam tempora enim minus explicabo adipisci quasi iure maiores quod mollitia vitae facilis, dolor deserunt perferendis in quo consectetur.            
-        </section>
-    );
+  const { data: plants = [], isLoading: plantsLoading } = usePlants();
+  if (plantsLoading) return <PlantSkeleton></PlantSkeleton>;
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+      {plants.map((plant) => (
+        <PlantCard key={plant._id} plant={plant} />
+      ))}
+    </div>
+  );
 };
 
 export default Plants;
