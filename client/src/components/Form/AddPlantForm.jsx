@@ -1,12 +1,16 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useRef } from "react";
+import { useGSAP } from "@gsap/react";
+import gsap from "gsap";
 import {
   TbFidgetSpinner,
   TbLeaf,
   TbCategory2,
   TbPlus,
   TbMinus,
+  TbScanEye,
 } from "react-icons/tb";
 import {
   MdCloudUpload,
@@ -14,6 +18,7 @@ import {
   MdAttachMoney,
   MdOutlineDescription,
   MdHistoryEdu,
+  MdErrorOutline,
 } from "react-icons/md";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,16 +41,17 @@ import {
 import { cn } from "@/lib/utils";
 
 const plantSchema = z.object({
-  name: z.string().min(3, "Name must be 3+ characters"),
+  name: z.string().min(3, "Name must be at least 3 characters"),
   category: z.enum(["Indoor", "Outdoor", "Succulent", "Flowering"]),
   description: z
     .string()
-    .min(20, "Provide a detailed botanical description (20+ chars)"),
-  price: z.coerce.number().positive("Price must be > 0"),
-  quantity: z.coerce.number().int().min(1, "Quantity must be at least 1"),
+    .min(20, "Detailed botanical logs required (20+ chars)"),
+  price: z.coerce.number().min(0.01, "Price must be greater than 0"),
+  quantity: z.coerce.number().int().min(1, "Minimum stock is 1"),
 });
 
 const AddPlantForm = ({ onSubmit, uploadImage, setUploadImage, loading }) => {
+  const previewRef = useRef();
   const form = useForm({
     resolver: zodResolver(plantSchema),
     defaultValues: {
@@ -60,83 +66,116 @@ const AddPlantForm = ({ onSubmit, uploadImage, setUploadImage, loading }) => {
   // eslint-disable-next-line react-hooks/incompatible-library
   const watched = form.watch();
 
+  // GSAP: Premium Tilt Effect on Preview Card
+  useGSAP(() => {
+    const el = previewRef.current;
+    if (!el) return;
+
+    const handleMouseMove = (e) => {
+      const { left, top, width, height } = el.getBoundingClientRect();
+      const x = (e.clientX - left) / width - 0.5;
+      const y = (e.clientY - top) / height - 0.5;
+      gsap.to(el, {
+        rotationY: x * 10,
+        rotationX: -y * 10,
+        transformPerspective: 1000,
+        ease: "power2.out",
+        duration: 0.6,
+      });
+    };
+
+    const handleMouseLeave = () => {
+      gsap.to(el, { rotationY: 0, rotationX: 0, duration: 0.6 });
+    };
+
+    el.addEventListener("mousemove", handleMouseMove);
+    el.addEventListener("mouseleave", handleMouseLeave);
+    return () => {
+      el.removeEventListener("mousemove", handleMouseMove);
+      el.removeEventListener("mouseleave", handleMouseLeave);
+    };
+  }, [watched.category]);
+
   const updateQuantity = (val) => {
     const current = form.getValues("quantity");
-    const next = Math.max(1, current + val);
-    form.setValue("quantity", next);
+    form.setValue("quantity", Math.max(1, current + val), {
+      shouldValidate: true,
+    });
   };
 
   return (
-    <div className="max-w-6xl mx-auto animate-in fade-in duration-700">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
-          className="grid grid-cols-1 lg:grid-cols-12 gap-8"
+          className="grid grid-cols-1 lg:grid-cols-12 gap-12"
         >
-          {/* --- LEFT COLUMN: THE DATA FORGE --- */}
-          <div className="lg:col-span-7 space-y-8 bg-white/50 backdrop-blur-md border border-emerald-100 rounded-[2.5rem] p-8 md:p-12 shadow-2xl shadow-emerald-900/5">
-            <div className="flex items-center gap-4 mb-2">
-              <div className="p-3 bg-emerald-600 text-white rounded-2xl shadow-lg shadow-emerald-200">
-                <TbLeaf size={28} className="animate-pulse" />
+          {/* LEFT: THE DATA INPUT FORGE */}
+          <div className="lg:col-span-7 space-y-10">
+            <header className="space-y-2">
+              <div className="flex items-center gap-3 text-emerald-600">
+                <TbLeaf size={32} className="animate-bounce" />
+                <span className="text-[10px] font-black uppercase tracking-[0.4em]">
+                  Vault Entry
+                </span>
               </div>
-              <div>
-                <h2 className="text-3xl font-black text-neutral-800 tracking-tight">
-                  Plant Registry
-                </h2>
-                <p className="text-neutral-500 font-medium">
-                  Document your specimen for the global garden.
-                </p>
-              </div>
-            </div>
+              <h1 className="text-5xl font-black text-slate-900 tracking-tighter">
+                New Specimen.
+              </h1>
+              <p className="text-slate-500 font-medium max-w-md">
+                Deploy your assets to the global nursery network with botanical
+                precision.
+              </p>
+            </header>
 
-            <div className="space-y-6">
-              {/* Plant Name */}
+            <div className="glass-card rounded-[3rem] p-8 md:p-12 space-y-8 border-white/60">
               <FormField
                 control={form.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-black uppercase tracking-widest text-emerald-700 flex items-center gap-2">
-                      <MdHistoryEdu /> Specimen Nomenclature
+                    <FormLabel className="form-label-fancy">
+                      <MdHistoryEdu className="text-emerald-500" size={16} />{" "}
+                      Botanical Name
                     </FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="e.g. Variegated Monstera Adansonii"
-                        className="h-14 rounded-2xl border-2 focus-visible:ring-emerald-500 bg-white/80 transition-all text-lg font-semibold"
+                        placeholder="e.g. Philodendron Pink Princess"
+                        className="input-field text-xl"
                         {...field}
                       />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-[10px] font-bold text-rose-500 uppercase italic" />
                   </FormItem>
                 )}
               />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Category Selector */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <FormField
                   control={form.control}
                   name="category"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs font-black uppercase tracking-widest text-emerald-700 flex items-center gap-2">
-                        <TbCategory2 /> Classification
+                      <FormLabel className="form-label-fancy">
+                        <TbCategory2 className="text-emerald-500" size={16} />{" "}
+                        Genus Classification
                       </FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         defaultValue={field.value}
                       >
                         <FormControl>
-                          <SelectTrigger className="h-14 rounded-2xl border-2 bg-white/80 font-semibold">
-                            <SelectValue placeholder="Select Category" />
+                          <SelectTrigger className="input-field font-bold">
+                            <SelectValue placeholder="Classification" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent className="rounded-2xl border-2 shadow-xl bg-white">
+                        <SelectContent className="rounded-2xl border-none shadow-2xl bg-white/90 backdrop-blur-xl">
                           {["Indoor", "Outdoor", "Succulent", "Flowering"].map(
                             (c) => (
                               <SelectItem
                                 key={c}
                                 value={c}
-                                className="focus:bg-emerald-50 font-medium py-3 cursor-pointer"
+                                className="py-3 font-bold text-slate-600 focus:bg-emerald-50 focus:text-emerald-700"
                               >
                                 {c}
                               </SelectItem>
@@ -148,211 +187,213 @@ const AddPlantForm = ({ onSubmit, uploadImage, setUploadImage, loading }) => {
                   )}
                 />
 
-                {/* Price Input */}
                 <FormField
                   control={form.control}
                   name="price"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs font-black uppercase tracking-widest text-emerald-700 flex items-center gap-2">
-                        <MdAttachMoney /> Market Valuation
+                      <FormLabel className="form-label-fancy">
+                        <MdAttachMoney className="text-emerald-500" size={16} />{" "}
+                        Listing Price
                       </FormLabel>
                       <FormControl>
-                        <div className="relative group">
-                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 font-bold">
+                        <div className="relative">
+                          <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 font-black text-xl">
                             $
                           </span>
                           <Input
                             type="number"
-                            className="h-14 pl-10 rounded-2xl border-2 bg-white/80 font-bold text-lg"
+                            step="0.01"
+                            className="input-field pl-10 text-xl font-black"
                             {...field}
                           />
                         </div>
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-[10px] font-bold text-rose-500 uppercase italic" />
                     </FormItem>
                   )}
                 />
               </div>
 
-              {/* Quantity Stepper (The "MF" Fix) */}
               <FormField
                 control={form.control}
                 name="quantity"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-black uppercase tracking-widest text-emerald-700">
-                      Stock Availability
+                    <FormLabel className="form-label-fancy">
+                      Inventory Units
                     </FormLabel>
-                    <div className="flex items-center gap-4 bg-emerald-50/50 p-2 rounded-2xl border-2 border-emerald-100 w-fit">
+                    <div className="flex items-center gap-6 bg-slate-100/50 p-2 rounded-3xl w-fit border border-slate-200 shadow-inner">
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
                         onClick={() => updateQuantity(-1)}
-                        className="h-10 w-10 rounded-xl hover:bg-white hover:text-emerald-600 transition-all shadow-sm"
+                        className="size-12 rounded-2xl bg-white shadow-sm hover:bg-rose-500 hover:text-white transition-all"
                       >
-                        <TbMinus strokeWidth={3} />
+                        <TbMinus size={20} />
                       </Button>
-                      <FormControl>
-                        <input
-                          className="w-12 text-center bg-transparent font-black text-xl text-emerald-900 outline-none"
-                          {...field}
-                          readOnly
-                        />
-                      </FormControl>
+                      <span className="text-3xl font-black text-slate-800 w-12 text-center">
+                        {field.value}
+                      </span>
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
                         onClick={() => updateQuantity(1)}
-                        className="h-10 w-10 rounded-xl hover:bg-white hover:text-emerald-600 transition-all shadow-sm"
+                        className="size-12 rounded-2xl bg-white shadow-sm hover:bg-emerald-500 hover:text-white transition-all"
                       >
-                        <TbPlus strokeWidth={3} />
+                        <TbPlus size={20} />
                       </Button>
                     </div>
-                    <FormMessage />
                   </FormItem>
                 )}
               />
 
-              {/* Description */}
               <FormField
                 control={form.control}
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-black uppercase tracking-widest text-emerald-700 flex items-center gap-2">
-                      <MdOutlineDescription /> Botanical Log
+                    <FormLabel className="form-label-fancy">
+                      <MdOutlineDescription
+                        className="text-emerald-500"
+                        size={16}
+                      />{" "}
+                      Care Instructions & Specs
                     </FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Describe sun requirements, soil type, and watering cycle..."
-                        className="min-h-37.5 rounded-2xl border-2 bg-white/80 focus-visible:ring-emerald-500 p-4 font-medium resize-none"
+                        placeholder="Explain light levels, soil pH, and moisture needs..."
+                        className="min-h-32 input-field py-4 resize-none"
                         {...field}
                       />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-[10px] font-bold text-rose-500 uppercase italic" />
                   </FormItem>
                 )}
               />
 
               <Button
+                disabled={loading || !uploadImage.image}
                 type="submit"
-                className="w-full h-16 rounded-2xl text-xl font-black bg-emerald-600 hover:bg-emerald-700 hover:scale-[1.01] active:scale-95 text-white transition-all shadow-xl shadow-emerald-200"
-                disabled={loading}
+                className="w-full h-20 rounded-3xl bg-slate-900 text-white text-lg font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-2xl active:scale-95 disabled:opacity-50"
               >
                 {loading ? (
                   <TbFidgetSpinner className="animate-spin text-3xl" />
                 ) : (
-                  "Registry Specimen"
+                  "Deploy to Network"
                 )}
               </Button>
             </div>
           </div>
 
-          {/* --- RIGHT COLUMN: THE LIVE LAB --- */}
-          <div className="lg:col-span-5 space-y-8">
-            {/* Visual Identity Upload */}
-            <div className="bg-white border-2 border-emerald-50 rounded-[2.5rem] p-8 shadow-xl">
-              <p className="text-xs font-black uppercase tracking-widest text-emerald-700 mb-6">
-                Visual Identity
+          {/* RIGHT: THE LIVE LAB PREVIEW */}
+          <div className="lg:col-span-5 space-y-10 lg:sticky lg:top-10 h-fit">
+            <div className="space-y-6">
+              <p className="form-label-fancy text-emerald-600">
+                <TbScanEye size={18} /> Real-Time Projection
               </p>
-              {!uploadImage.url ? (
-                <label className="flex flex-col items-center justify-center h-80 border-4 border-dashed border-emerald-100 rounded-4xl cursor-pointer hover:bg-emerald-50/50 hover:border-emerald-300 transition-all group overflow-hidden relative">
-                  <div className="absolute inset-0 bg-linear-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <MdCloudUpload
-                    size={56}
-                    className="text-emerald-300 group-hover:text-emerald-500 group-hover:-translate-y-2 transition-all duration-500"
-                  />
-                  <span className="mt-4 font-bold text-emerald-700">
-                    Drop your High-Res PNG
-                  </span>
-                  <span className="text-xs text-neutral-400 mt-1 uppercase tracking-tighter">
-                    Max Size: 5MB
-                  </span>
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files[0];
-                      if (file)
-                        setUploadImage({
-                          image: file,
-                          url: URL.createObjectURL(file),
-                        });
-                    }}
-                  />
-                </label>
-              ) : (
-                <div className="relative h-80 rounded-4xl overflow-hidden shadow-2xl group border-4 border-white">
-                  <img
-                    src={uploadImage.url}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                    alt="Preview"
-                  />
-                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-all" />
-                  <button
-                    type="button"
-                    onClick={() => setUploadImage({ image: null, url: null })}
-                    className="absolute top-6 right-6 p-3 bg-red-500/90 text-white rounded-2xl hover:bg-red-600 transition-all scale-0 group-hover:scale-100 shadow-xl"
-                  >
-                    <MdClose size={20} />
-                  </button>
-                </div>
-              )}
-            </div>
 
-            {/* Glassmorphic Live Preview */}
-            <div
-              className={cn(
-                "relative rounded-[2.5rem] p-8 overflow-hidden transition-all duration-500 min-h-70 flex flex-col justify-between shadow-2xl shadow-emerald-900/20",
-                watched.category === "Flowering"
-                  ? "bg-linear-to-br from-pink-500 to-rose-600"
-                  : watched.category === "Succulent"
-                    ? "bg-linear-to-br from-amber-400 to-orange-500"
-                    : "bg-linear-to-br from-emerald-600 to-teal-800",
-              )}
-            >
-              <div className="absolute -right-20 -top-20 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
-              <div className="absolute -left-20 -bottom-20 w-64 h-64 bg-black/10 rounded-full blur-3xl" />
-
-              <div className="relative z-10">
-                <div className="flex justify-between items-start mb-4">
-                  <span className="bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-white border border-white/30">
-                    {watched.category || "Classification"}
-                  </span>
-                  <TbLeaf
-                    className="text-white/40 animate-spin-slow"
-                    size={32}
-                  />
-                </div>
-                <h3 className="text-3xl font-black text-white leading-none mb-2 drop-shadow-md truncate">
-                  {watched.name || "Specimen Name"}
-                </h3>
-                <p className="text-white/70 text-sm font-medium line-clamp-2 max-w-[80%] italic">
-                  "{watched.description || "Waiting for botanical logs..."}"
-                </p>
+              {/* IMAGE DROPZONE */}
+              <div className="relative group">
+                {!uploadImage.url ? (
+                  <label className="flex flex-col items-center justify-center h-80 border-4 border-dashed border-slate-200 rounded-[3rem] cursor-pointer hover:border-emerald-400 hover:bg-emerald-50/30 transition-all duration-500 overflow-hidden">
+                    <MdCloudUpload
+                      size={60}
+                      className="text-slate-300 group-hover:text-emerald-500 group-hover:-translate-y-3 transition-all duration-700"
+                    />
+                    <span className="mt-4 font-black text-slate-400 group-hover:text-emerald-700 uppercase tracking-tighter">
+                      Capture Visuals
+                    </span>
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file)
+                          setUploadImage({
+                            image: file,
+                            url: URL.createObjectURL(file),
+                          });
+                      }}
+                    />
+                  </label>
+                ) : (
+                  <div className="relative h-80 rounded-[3rem] overflow-hidden shadow-2xl border-4 border-white">
+                    <img
+                      src={uploadImage.url}
+                      className="w-full h-full object-cover"
+                      alt="Preview"
+                    />
+                    <button
+                      onClick={() => setUploadImage({ image: null, url: null })}
+                      className="absolute top-6 right-6 size-12 bg-rose-500 text-white rounded-2xl flex items-center justify-center hover:rotate-90 transition-all shadow-xl"
+                    >
+                      <MdClose size={24} />
+                    </button>
+                  </div>
+                )}
+                {!uploadImage.image && (
+                  <div className="mt-4 flex items-center gap-2 text-rose-500 font-bold text-[10px] uppercase tracking-widest">
+                    <MdErrorOutline /> Image Required for Registry
+                  </div>
+                )}
               </div>
 
-              <div className="relative z-10 flex justify-between items-end mt-12">
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-black text-white/50 uppercase tracking-tighter">
-                    Market Value
-                  </span>
-                  <div className="text-5xl font-black text-white tracking-tighter italic">
-                    ${watched.price || "0"}
-                    <span className="text-xl opacity-60">.00</span>
+              {/* DYNAMIC GSAP CARD */}
+              <div
+                ref={previewRef}
+                className={cn(
+                  "p-10 rounded-[3.5rem] min-h-100 flex flex-col justify-between shadow-2xl transition-colors duration-1000 relative overflow-hidden",
+                  watched.category === "Flowering"
+                    ? "bg-rose-500"
+                    : watched.category === "Succulent"
+                      ? "bg-amber-500"
+                      : watched.category === "Outdoor"
+                        ? "bg-slate-800"
+                        : "bg-emerald-600",
+                )}
+              >
+                <div className="absolute top-0 right-0 size-64 bg-white/10 blur-[100px] rounded-full" />
+
+                <div className="relative z-10 space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="px-4 py-2 rounded-full bg-white/20 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest border border-white/20">
+                      {watched.category}
+                    </span>
+                    <TbLeaf
+                      className="text-white/30 animate-spin-slow"
+                      size={40}
+                    />
                   </div>
+                  <h3 className="text-4xl font-black text-white leading-none tracking-tighter truncate">
+                    {watched.name || "Untitled Specimen"}
+                  </h3>
+                  <p className="text-white/60 text-sm italic font-medium line-clamp-3">
+                    "{watched.description || "Synthesizing botanical logs..."}"
+                  </p>
                 </div>
-                <div className="bg-white/10 backdrop-blur-xl border border-white/20 px-6 py-3 rounded-2xl text-center">
-                  <span className="block text-[10px] font-black text-emerald-100 uppercase leading-none mb-1">
-                    Stock
-                  </span>
-                  <span className="text-2xl font-black text-white leading-none">
-                    {watched.quantity}
-                  </span>
+
+                <div className="relative z-10 flex justify-between items-end">
+                  <div>
+                    <p className="text-[10px] font-black text-white/40 uppercase mb-1">
+                      Mkt. Value
+                    </p>
+                    <div className="text-6xl font-black text-white tracking-tighter italic">
+                      ${watched.price}
+                      <span className="text-2xl opacity-40">.00</span>
+                    </div>
+                  </div>
+                  <div className="bg-black/20 backdrop-blur-xl px-6 py-4 rounded-3xl border border-white/10 text-center">
+                    <p className="text-[9px] font-black text-white/50 uppercase">
+                      Stock
+                    </p>
+                    <p className="text-3xl font-black text-white leading-none">
+                      {watched.quantity}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

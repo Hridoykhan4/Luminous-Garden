@@ -37,7 +37,7 @@ const Hero = () => {
         .from(
           ".hero-visual",
           {
-            clipPath: "inset(100% 0% 0% 0%)", 
+            clipPath: "inset(100% 0% 0% 0%)",
             scale: 1.2,
             opacity: 0,
           },
@@ -145,7 +145,7 @@ const Hero = () => {
           </div>
 
           {/* NEXT-WORLD FLOATING CARD */}
-          <div className="floating-card glass absolute -bottom-10 md:-left-16 p-8 rounded-[3rem] border-white/20 z-20 shadow-2xl">
+          <div className="floating-card glass absolute -bottom-10 md:-left-16 p-4 lg:p-8 rounded-[3rem] border-white/20 z-20 shadow-2xl">
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <div className="w-3 h-3 rounded-full bg-primary shadow-[0_0_15px_rgba(var(--primary),0.5)]" />
@@ -170,7 +170,7 @@ const Hero = () => {
                   </p>
                   <p className="text-xl font-black text-foreground">Peak</p>
                 </div>
-                <div className="h-10 w-[1px] bg-white/10" />
+                <div className="h-10 w-px bg-white/10" />
                 <div>
                   <p className="text-[10px] font-bold text-muted-foreground uppercase">
                     Rarity

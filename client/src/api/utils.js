@@ -1,9 +1,5 @@
 import axios from "axios";
 
-/**
- * @param {File} file
- * @param {Function} uploadFn
- */
 export const imageUpload = async (file, uploadFn) => {
   if (!file) return null;
 

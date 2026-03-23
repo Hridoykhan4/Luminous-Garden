@@ -8,12 +8,12 @@ import DashboardLayout from "../layouts/DashboardLayout";
 // --- Components & Guards ---
 import PrivateRoute from "./PrivateRoute";
 import SellerRoute from "./SellerRoute";
-import AdminRoute from "./AdminRoute"; // Assuming you'll need this for ManageUsers
+import AdminRoute from "./AdminRoute"; 
 import LoadingSpinner from "@/components/Shared/LoadingSpinner/LoadingSpinner";
 import ErrorPage from "../pages/ErrorPage/ErrorPage";
 import Forbidden from "@/pages/Forbidden/Forbidden";
 
-// --- 1. Optimized Lazy Loading ---
+// --- 1. Lazy Loading ---
 // eslint-disable-next-line no-unused-vars
 const Loadable = (Component) => (props) => (
   <Suspense fallback={<LoadingSpinner />}>
@@ -21,7 +21,7 @@ const Loadable = (Component) => (props) => (
   </Suspense>
 );
 
-// --- 2. Lazy Imports (Grouped by Domain) ---
+// --- 2. Lazy Imports ---
 
 // Public Pages
 const Home = Loadable(lazy(() => import("../pages/Home/Home")));
@@ -59,7 +59,7 @@ const AllOrders = Loadable(
   lazy(() => import("../pages/Dashboard/Admin/AllOrders")),
 );
 
-// --- 3. Router Configuration ---
+//  Router Configuration
 const Router = createBrowserRouter([
   {
     path: "/",

@@ -6,10 +6,9 @@ import Footer from "../components/Shared/Footer/Footer";
 
 const MainLayout = () => {
   useEffect(() => {
-    // Initialize Lenis Smooth Scroll
     const lenis = new Lenis({
       duration: 1.2,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), 
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
     });
 
     function raf(time) {
@@ -18,14 +17,14 @@ const MainLayout = () => {
     }
 
     requestAnimationFrame(raf);
-    
-    return () => lenis.destroy(); 
+
+    return () => lenis.destroy();
   }, []);
 
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
-      <main className="grow"> 
+      <main className="grow">
         <Outlet />
       </main>
       <Footer />
@@ -33,4 +32,4 @@ const MainLayout = () => {
   );
 };
 
-export default MainLayout
+export default MainLayout;

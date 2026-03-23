@@ -25,7 +25,6 @@ const AddPlant = () => {
     try {
       // 2. Image Upload
       const imageUrl = await imageUpload(uploadImage.image);
-      console.log("Image Uploaded:", imageUrl);
 
       // 3. MANUAL MAPPING (No spreading)
       const plantData = {
@@ -41,8 +40,6 @@ const AddPlant = () => {
           email: user?.email,
         },
       };
-
-      console.log("Payload to Server:", plantData);
 
       // 4. API Call
       const { data } = await axiosSecure.post("/plants", plantData);

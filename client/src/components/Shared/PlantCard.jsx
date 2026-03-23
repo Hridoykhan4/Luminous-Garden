@@ -48,7 +48,7 @@ const PlantCard = ({ plant }) => {
       className="group relative bg-card rounded-[2.5rem] p-4 border border-border/40 transition-colors hover:border-primary/40"
     >
       {/* 1. VISUAL ANCHOR */}
-      <div className="relative aspect-[4/5] overflow-hidden rounded-[2rem] bg-secondary/10">
+      <div className="relative aspect-4/5 overflow-hidden rounded-4xl bg-secondary/10">
         <img
           ref={imageRef}
           src={plant.image}

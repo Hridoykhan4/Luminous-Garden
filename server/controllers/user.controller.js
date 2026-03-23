@@ -31,7 +31,7 @@ const getUsers = async (req, res, usersCollection) => {
 const getUserRole = async (req, res, usersCollection) => {
   const email = req.params.email;
   const user = await usersCollection.findOne({ email });
-  if (!user) return res.status(404).json({ role: "customer" }); // Fallback
+  if (!user) return res.status(404).json({ role: "customer" }); 
   res.status(200).json({ role: user.role });
 };
 

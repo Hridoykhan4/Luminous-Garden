@@ -36,7 +36,7 @@ const ActionLinks = ({ role , isRoleLoading}) => {
         className="bg-foreground text-background h-14 px-8 rounded-2xl font-bold hover:bg-foreground/90 transition-all"
       >
         <Link
-          to="/dashboard/admin-overview"
+          to="/dashboard"
           className="flex items-center gap-2"
         >
           <TbLayoutDashboard size={20} /> System Control
@@ -62,7 +62,7 @@ const ActionLinks = ({ role , isRoleLoading}) => {
           variant="secondary"
           className="h-14 px-8 rounded-2xl font-bold hover-lift"
         >
-          <Link to="/dashboard/my-inventory">My Inventory</Link>
+          <Link to="/dashboard/my-plants">My Inventory</Link>
         </Button>
       </div>
     );

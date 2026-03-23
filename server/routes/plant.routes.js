@@ -17,7 +17,7 @@ module.exports = (plantsCollection, usersCollection) => {
   router.post(
     "/",
     verifyToken,
-    verifyRole(usersCollection, "seller"),
+    verifyRole(usersCollection, ["seller"]),
     validate(plantSchema),
     (req, res) => addPlant(req, res, plantsCollection),
   );

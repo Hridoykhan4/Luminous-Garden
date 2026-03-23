@@ -192,4 +192,26 @@
   .badge-low-stock {
     @apply bg-rose-50 text-rose-600 px-3 py-1 rounded-lg font-black animate-pulse;
   }
+  .glass-card {
+    @apply bg-white/70 backdrop-blur-2xl border border-white/40 shadow-[0_32px_64px_-15px_rgba(0,0,0,0.05)];
+  }
+  
+  .input-field {
+    @apply h-14 rounded-2xl border-slate-200 bg-slate-50/50 transition-all duration-300 
+           focus-visible:ring-emerald-500 focus-visible:bg-white focus-visible:border-emerald-200 
+           placeholder:text-slate-400 font-semibold text-slate-700 shadow-inner;
+  }
+
+  .form-label-fancy {
+    @apply text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2 flex items-center gap-2;
+  }
+
+  .animate-spin-slow {
+    animation: spin 8s linear infinite;
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
 }

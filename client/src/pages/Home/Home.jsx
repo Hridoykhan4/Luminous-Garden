@@ -1,12 +1,18 @@
-import { useRef } from "react";
+import { lazy, Suspense, useRef } from "react";
 import gsap from "gsap";
-import { useGSAP } from "@gsap/react";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Hero from "@/components/Home/Hero";
 import SectionTitle from "@/components/Shared/SectionTitle/SectionTitle";
 import PlantSkeleton from "@/components/Shared/PlantSkeleton/PlantSkeleton";
 import usePlants from "@/hooks/usePlants";
 import PlantCard from "@/components/Shared/PlantCard";
 import LuminousButton from "@/components/Shared/LuminousButton/LuminousButton";
+import LoadingSpinner from "@/components/Shared/LoadingSpinner/LoadingSpinner";
+const PulseStats = lazy(() => import("../../components/Home/PulseStats"));
+const TrustPillar = lazy(() => import("../../components/Home/TrustPillar"));
+const BotanicalProtocol = lazy(() => import('../../components/Home/BotanicalProtocol'))
+
+gsap.registerPlugin(ScrollTrigger);
 
 const Home = () => {
   const { data: response = {}, isLoading } = usePlants("", 8);
@@ -14,73 +20,77 @@ const Home = () => {
   const totalCount = response?.count || 0;
   const container = useRef(null);
 
-  useGSAP(
-    () => {
-      if (!isLoading && featuredPlants.length > 0) {
-        gsap.from(".plant-card-wrapper", {
-          y: 50,
-          opacity: 0,
-          stagger: 0.1,
-          duration: 0.8,
-          ease: "expo.out",
-          clearProps: "all",
-        });
-      }
-    },
-    { dependencies: [isLoading], scope: container },
-  );
-
   return (
-    <main ref={container} className="relative">
-      <div className="container-page pb-20">
-        <Hero />
+    <main ref={container} className="relative bg-[#FAFAF9]">
+      <div className="absolute top-0 right-0 w-100 h-100 bg-emerald-100/40 blur-[120px] rounded-full -z-10" />
+      <div className="absolute top-[20%] left-0 w-75 h-75 bg-teal-100/30 blur-[100px] rounded-full -z-10" />
 
-        <section id="explore" className="section-spacing">
+      <div className="container-page">
+        <Hero />
+        {/* --- INVENTORY SECTION --- */}
+        <section id="explore" className="section-spacing pt-10">
           <SectionTitle
             heading="Curated Inventory"
-            subheading="Verified botanical specimens from local growers."
+            subheading="Verified botanical specimens from elite local growers."
           />
 
           {isLoading ? (
-            <PlantSkeleton />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              {[...Array(8)].map((_, i) => (
+                <PlantSkeleton key={i} />
+              ))}
+            </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
               {featuredPlants.map((plant) => (
-                <div key={plant._id} className="plant-card-wrapper">
+                <div
+                  key={plant._id}
+                  className="plant-card-wrapper perspective-1000"
+                >
                   <PlantCard plant={plant} />
                 </div>
               ))}
             </div>
           )}
 
-          {/* Dynamic Action Area */}
-          {!isLoading && featuredPlants?.length && (
-            <div className="md:mt-16 mt-10 flex flex-col items-center gap-6">
+          {!isLoading && featuredPlants?.length > 0 && (
+            <div className="md:mt-20 mt-12 flex flex-col items-center gap-6">
               <LuminousButton to="/plants">
                 Explore Full Marketplace
               </LuminousButton>
 
-              <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-[0.3em]">
-                Showing {featuredPlants.length} of {totalCount} available
-                specimens
-              </p>
+              <div className="flex items-center gap-2 px-4 py-1.5 bg-emerald-50 rounded-full border border-emerald-100">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <p className="text-[10px] font-black text-emerald-700 uppercase tracking-[0.2em]">
+                  {totalCount} Specimens Live Now
+                </p>
+              </div>
             </div>
           )}
         </section>
 
-        <section className="section-spacing">
-          Lorem ipsum dolor sit amet consectetur adipisicing elit. Quaerat quo
-          esse sint. Reiciendis optio tempora placeat quia sit incidunt porro
-          error, cumque deleniti, repellendus ducimus repellat voluptas quaerat
-          odit totam similique architecto dignissimos earum itaque? Dolore,
-          consequuntur reprehenderit deserunt atque cum nostrum. Quasi
-          laboriosam in asperiores rerum quos cum odit, ad sit! Error tempora
-          quisquam alias magni quo rerum molestiae magnam eos doloremque
-          dolores. Architecto id eos atque ipsum! Labore itaque tenetur magni id
-          inventore nesciunt nam dicta corporis expedita ipsa! Tempore quae fuga
-          impedit tenetur corrupti! Quam ratione distinctio eos et ut, optio
-          consectetur assumenda asperiores libero nostrum temporibus.
+        <Suspense fallback={<LoadingSpinner/>}>
+
+        {/* --- TRUST PILLARS SECTION --- */}
+        <section className="section-spacing ">
+          <TrustPillar></TrustPillar>
         </section>
+
+        {/* --- How It Works Section --- */}
+        <section className="section-spacing ">
+          <BotanicalProtocol></BotanicalProtocol>
+        </section>
+
+        {/* Pulse Stats Count */}
+        <section className="section-spacing ">
+          <PulseStats></PulseStats>
+        </section>
+
+        </Suspense>
+
       </div>
     </main>
   );
