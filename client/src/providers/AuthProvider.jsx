@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   GoogleAuthProvider,
   createUserWithEmailAndPassword,
@@ -18,6 +18,7 @@ const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: "select_account" });
 
 const AuthProvider = ({ children }) => {
+  const syncRef = useRef(sessionStorage.getItem("isSynced") === "true");
   const axiosPublic = useAxiosPublic();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -52,27 +53,41 @@ const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      const controller = new AbortController();
+
       setUser(currentUser);
-      console.log('Bortoman', currentUser);
-      if (currentUser?.email) {
-        const isSessionSynced = sessionStorage.getItem("isSynced");
-        if (!isSessionSynced) {
-          try {
+
+      try {
+        if (currentUser?.email) {
+          if (!syncRef.current) {
             await axiosPublic.post(
-              `/auth/jwt`,
+              "/auth/jwt",
               { email: currentUser.email },
-              { withCredentials: true }
+              { withCredentials: true, signal: controller.signal },
             );
             sessionStorage.setItem("isSynced", "true");
-          } catch (err) {
-            console.error("JWT Security Sync Failed:", err);
+            syncRef.current = true;
+          }
+        } else {
+          if (syncRef.current) {
+            syncRef.current = false;
+            sessionStorage.removeItem("isSynced");
+
+            await axiosPublic.post(
+              "/auth/logout",
+              {},
+              { withCredentials: true, signal: controller.signal },
+            );
+            console.log("🛡️ Server-side token nuked.");
           }
         }
-      } else {
-        sessionStorage.removeItem("isSynced");
-        await axiosPublic.get("/auth/logout", { withCredentials: true }).catch(() => {});
+      } catch (err) {
+        if (err.name !== "CanceledError") {
+          console.error("Auth Sync Error:", err.message);
+        }
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();
@@ -90,7 +105,9 @@ const AuthProvider = ({ children }) => {
     updateUserProfile,
   };
 
-  return <AuthContext.Provider value={authInfo}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={authInfo}>{children}</AuthContext.Provider>
+  );
 };
 
 export default AuthProvider;

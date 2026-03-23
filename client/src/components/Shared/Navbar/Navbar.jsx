@@ -26,11 +26,84 @@ import {
 
 import useAuth from "@/hooks/useAuth";
 import LuminousLogo from "../LuminousLogo/LuminousLogo";
+import toast from "react-hot-toast";
+import { TbLeaf } from "react-icons/tb";
 
 const Navbar = () => {
+  const logoutToastRef = useRef();
   const headerRef = useRef(null);
   const linksRef = useRef([]);
   const { user, logOut } = useAuth();
+
+  const handleLogout = () => {
+    if (logoutToastRef.current) return;
+    logoutToastRef.current = toast.custom(
+      (t) => (
+        <div
+          className={cn(
+            "flex flex-col p-5 min-w-[320px] shadow-2xl rounded-[2.5rem] border border-border/40 bg-card/95 backdrop-blur-2xl transition-all duration-300",
+            t.visible
+              ? "translate-y-0 opacity-100 scale-100"
+              : "translate-y-4 opacity-0 scale-95",
+          )}
+        >
+          <div className="flex items-center gap-4 mb-6">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <TbLeaf size={24} className="animate-pulse" />
+            </div>
+            <div className="space-y-0.5">
+              <h3 className="text-sm font-black uppercase tracking-tighter text-foreground leading-none">
+                Leaving the Garden?
+              </h3>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">
+                Session Termination
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={async () => {
+                try {
+                  toast.dismiss(t.id);
+                  logoutToastRef.current = null;
+                  await logOut();
+                  toast.success("Safe travels, collector.", {
+                    icon: "🌱",
+                    style: {
+                      borderRadius: "20px",
+                      fontSize: "12px",
+                      fontWeight: "bold",
+                    },
+                  });
+                } catch (err) {
+                  console.log(err);
+                  toast.error("Process interrupted.");
+                }
+              }}
+              className="flex-1 h-12 bg-primary text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 transition-all active:scale-95"
+            >
+              Confirm
+            </button>
+
+            <button
+              onClick={() => {
+                toast.dismiss(t.id);
+                logoutToastRef.current = null;
+              }}
+              className="flex-1 h-12 bg-secondary/50 text-foreground text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl border border-border/50 hover:bg-secondary transition-all"
+            >
+              Stay
+            </button>
+          </div>
+        </div>
+      ),
+      {
+        position: "top-center",
+        duration: Infinity,
+      },
+    );
+  };
 
   useGSAP(
     () => {
@@ -168,7 +241,7 @@ const Navbar = () => {
                 </DropdownMenuItem>
 
                 <DropdownMenuItem
-                  onClick={logOut}
+                  onClick={handleLogout}
                   className="text-destructive focus:bg-destructive/5 focus:text-destructive cursor-pointer flex items-center gap-3 py-2"
                 >
                   <CiLogout className="size-4" />
