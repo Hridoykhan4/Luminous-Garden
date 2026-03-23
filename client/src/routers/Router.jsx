@@ -8,7 +8,7 @@ import DashboardLayout from "../layouts/DashboardLayout";
 // --- Components & Guards ---
 import PrivateRoute from "./PrivateRoute";
 import SellerRoute from "./SellerRoute";
-import AdminRoute from "./AdminRoute"; 
+import AdminRoute from "./AdminRoute";
 import LoadingSpinner from "@/components/Shared/LoadingSpinner/LoadingSpinner";
 import ErrorPage from "../pages/ErrorPage/ErrorPage";
 import Forbidden from "@/pages/Forbidden/Forbidden";
@@ -49,6 +49,10 @@ const AddPlant = Loadable(
 );
 const MyInventory = Loadable(
   lazy(() => import("../pages/Dashboard/Seller/MyInventory")),
+);
+
+const UpdatePlant = Loadable(
+  lazy(() => import("../pages/Dashboard/Seller/UpdatePlant")),
 );
 
 // Dashboard: Admin
@@ -100,6 +104,14 @@ const Router = createBrowserRouter([
         ),
       },
       {
+        path: "/dashboard/update-plant/:id",
+        element: (
+          <SellerRoute>
+            <UpdatePlant />
+          </SellerRoute>
+        ),
+      },
+      {
         path: "my-plants",
         element: (
           <SellerRoute>
@@ -128,9 +140,8 @@ const Router = createBrowserRouter([
     ],
   },
 
-
   { path: "/forbidden", element: <Forbidden /> },
-  { path: "*", element: <ErrorPage></ErrorPage>}, 
+  { path: "*", element: <ErrorPage></ErrorPage> },
 ]);
 
 export default Router;

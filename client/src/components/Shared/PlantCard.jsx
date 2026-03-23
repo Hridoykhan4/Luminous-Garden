@@ -5,11 +5,11 @@ import useUserRole from "@/hooks/useUserRole";
 import useAuth from "@/hooks/useAuth";
 import LuminousButton from "./LuminousButton/LuminousButton";
 import { Link } from "react-router";
-
+import { cn } from "@/lib/utils";
 
 const PlantCard = ({ plant }) => {
   const { user } = useAuth();
-  const {role} = useUserRole();
+  const { role } = useUserRole();
   const cardRef = useRef(null);
   const imageRef = useRef(null);
 
@@ -70,9 +70,16 @@ const PlantCard = ({ plant }) => {
 
         {/* Quick Stock Indicator */}
         {!isOutOfStock && (
-          <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <div className="px-3 py-1.5 bg-black/50 backdrop-blur-lg rounded-xl text-[10px] text-white font-bold flex items-center gap-2">
-              <TbLeaf className="text-primary" /> {plant.quantity} in Stock
+          <div
+            className={cn(
+              "absolute bottom-4 left-4 right-4 flex justify-between items-end transition-all duration-500 ease-out",
+              "opacity-100 translate-y-0",
+              "lg:opacity-0 lg:translate-y-2 lg:group-hover:opacity-100 lg:group-hover:translate-y-0",
+            )}
+          >
+            <div className="px-3 py-1.5 bg-black/60 backdrop-blur-xl border border-white/10 rounded-xl text-[10px] text-white font-bold flex items-center gap-2 shadow-2xl">
+              <TbLeaf className="text-emerald-400 animate-pulse" />
+              <span className="tracking-wider">{plant.quantity} IN STOCK</span>
             </div>
           </div>
         )}
@@ -125,12 +132,14 @@ const PlantCard = ({ plant }) => {
                 className="flex-1"
                 onClick={() => console.log("Add to Cart")}
                 disabled={isOutOfStock}
-                
               >
                 <TbShoppingCart className="text-lg" />
                 {isOutOfStock ? "Wishlist" : "Acquire"}
               </LuminousButton>
-              <Link to={`/plants/${plant._id}`}  className="w-14 h-14 flex items-center justify-center bg-secondary/50 rounded-2xl border border-border/50 hover:text-primary hover:border-primary/30 transition-all active:scale-90">
+              <Link
+                to={`/plants/${plant._id}`}
+                className="w-14 h-14 flex items-center justify-center bg-secondary/50 rounded-2xl border border-border/50 hover:text-primary hover:border-primary/30 transition-all active:scale-90"
+              >
                 <TbEye className="text-xl" />
               </Link>
             </div>

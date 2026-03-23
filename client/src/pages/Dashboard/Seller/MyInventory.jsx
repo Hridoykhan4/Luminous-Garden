@@ -27,12 +27,12 @@ import {
   MdWarning,
 } from "react-icons/md";
 import useInventory from "@/hooks/useInventory";
-import useAuth from "@/hooks/useAuth";
+// import useAuth from "@/hooks/useAuth";
 import LoadingSpinner from "@/components/Shared/LoadingSpinner/LoadingSpinner";
 import toast from "react-hot-toast";
 
 const MyInventory = () => {
-  const { user } = useAuth();
+  // const { user } = useAuth();
   const { plants, isLoading, deletePlant, updatePlant } = useInventory();
   const [selectedPlant, setSelectedPlant] = useState(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
