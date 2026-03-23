@@ -10,12 +10,14 @@ import LuminousButton from "@/components/Shared/LuminousButton/LuminousButton";
 import LoadingSpinner from "@/components/Shared/LoadingSpinner/LoadingSpinner";
 const PulseStats = lazy(() => import("../../components/Home/PulseStats"));
 const TrustPillar = lazy(() => import("../../components/Home/TrustPillar"));
-const BotanicalProtocol = lazy(() => import('../../components/Home/BotanicalProtocol'))
+const BotanicalProtocol = lazy(
+  () => import("../../components/Home/BotanicalProtocol"),
+);
 
 gsap.registerPlugin(ScrollTrigger);
 
 const Home = () => {
-  const { data: response = {}, isLoading } = usePlants("", 8);
+  const { data: response = {}, isLoading, refetch } = usePlants("", 8);
   const featuredPlants = response?.data || [];
   const totalCount = response?.count || 0;
   const container = useRef(null);
@@ -47,7 +49,7 @@ const Home = () => {
                   key={plant._id}
                   className="plant-card-wrapper perspective-1000"
                 >
-                  <PlantCard plant={plant} />
+                  <PlantCard refetch={refetch} plant={plant} />
                 </div>
               ))}
             </div>
@@ -72,25 +74,22 @@ const Home = () => {
           )}
         </section>
 
-        <Suspense fallback={<LoadingSpinner/>}>
+        <Suspense fallback={<LoadingSpinner />}>
+          {/* --- TRUST PILLARS SECTION --- */}
+          <section className="section-spacing ">
+            <TrustPillar></TrustPillar>
+          </section>
 
-        {/* --- TRUST PILLARS SECTION --- */}
-        <section className="section-spacing ">
-          <TrustPillar></TrustPillar>
-        </section>
+          {/* --- How It Works Section --- */}
+          <section className="section-spacing ">
+            <BotanicalProtocol></BotanicalProtocol>
+          </section>
 
-        {/* --- How It Works Section --- */}
-        <section className="section-spacing ">
-          <BotanicalProtocol></BotanicalProtocol>
-        </section>
-
-        {/* Pulse Stats Count */}
-        <section className="section-spacing ">
-          <PulseStats></PulseStats>
-        </section>
-
+          {/* Pulse Stats Count */}
+          <section className="section-spacing ">
+            <PulseStats></PulseStats>
+          </section>
         </Suspense>
-
       </div>
     </main>
   );
