@@ -46,7 +46,7 @@ async function run() {
     // --- The Folder Connection ---
     app.use("/users", userRoutes(usersCollection));
     app.use("/auth", authRoutes);
-    app.use("/plants", plantRoutes(plantsCollection));
+    app.use("/plants", plantRoutes(plantsCollection, usersCollection));
 
     console.log("Database connected and Routes initialized!");
   } finally {

@@ -41,67 +41,55 @@ const Navbar = () => {
       (t) => (
         <div
           className={cn(
-            "flex flex-col p-5 min-w-[320px] shadow-2xl rounded-[2.5rem] border border-border/40 bg-card/95 backdrop-blur-2xl transition-all duration-300",
+            "flex flex-col p-6 min-w-[340px] shadow-[0_20px_50px_rgba(0,0,0,0.2)] rounded-[2.5rem] border-2 border-primary/20 bg-white/95 backdrop-blur-2xl transition-all duration-500",
             t.visible
               ? "translate-y-0 opacity-100 scale-100"
-              : "translate-y-4 opacity-0 scale-95",
+              : "translate-y-10 opacity-0 scale-90",
           )}
         >
           <div className="flex items-center gap-4 mb-6">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <TbLeaf size={24} className="animate-pulse" />
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/30">
+              <TbLeaf size={28} className="animate-bounce" />
             </div>
-            <div className="space-y-0.5">
-              <h3 className="text-sm font-black uppercase tracking-tighter text-foreground leading-none">
+            <div>
+              <h3 className="text-lg font-black uppercase tracking-tighter text-slate-900">
                 Leaving the Garden?
               </h3>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">
+              <p className="text-[10px] font-bold text-primary uppercase tracking-[0.2em]">
                 Session Termination
               </p>
             </div>
           </div>
-
           <div className="flex gap-3">
             <button
               onClick={async () => {
-                try {
-                  toast.dismiss(t.id);
-                  logoutToastRef.current = null;
-                  await logOut();
-                  toast.success("Safe travels, collector.", {
-                    icon: "🌱",
-                    style: {
-                      borderRadius: "20px",
-                      fontSize: "12px",
-                      fontWeight: "bold",
-                    },
-                  });
-                } catch (err) {
-                  console.log(err);
-                  toast.error("Process interrupted.");
-                }
+                toast.dismiss(t.id);
+                logoutToastRef.current = null;
+                const load = toast.loading("Clearing session...");
+                await logOut();
+                toast.success("Safe travels, collector.", {
+                  id: load,
+                  icon: "🌱",
+                  position: "top-left",
+                });
               }}
-              className="flex-1 h-12 bg-primary text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 transition-all active:scale-95"
+              className="flex-1 h-14 bg-primary text-white text-xs font-black uppercase tracking-widest rounded-2xl hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-primary/25"
             >
               Confirm
             </button>
-
             <button
               onClick={() => {
                 toast.dismiss(t.id);
                 logoutToastRef.current = null;
               }}
-              className="flex-1 h-12 bg-secondary/50 text-foreground text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl border border-border/50 hover:bg-secondary transition-all"
+              className="flex-1 h-14 bg-slate-100 text-slate-900 text-xs font-black uppercase tracking-widest rounded-2xl border border-slate-200 hover:bg-slate-200 transition-all"
             >
               Stay
             </button>
           </div>
         </div>
       ),
-      {
-        position: "top-center",
-        duration: Infinity,
-      },
+      { position: "top-center", duration: Infinity },
     );
   };
 
@@ -182,7 +170,7 @@ const Navbar = () => {
                 }
               >
                 {link.label}
-                {/* Modern Indicator Layer */}
+        
                 <span
                   className={cn(
                     "absolute -bottom-5.5 left-0 h-0.5 w-0 bg-primary transition-all duration-300 group-hover:w-full",
@@ -318,12 +306,19 @@ const MobileNav = ({ navLinks, user }) => (
       </div>
 
       {!user && (
-        <div className="grid grid-cols-2 gap-4 pb-10 border-t pt-6">
-          <Button variant="outline" asChild>
+        <div className="flex flex-col  justify-center  w-1/2 mx-auto pb-5  gap-4">
+          <Button
+            variant="outline"
+            asChild
+            className="h-16 rounded-[1.5rem] font-black uppercase tracking-widest border-2"
+          >
             <Link to="/login">Login</Link>
           </Button>
-          <Button asChild>
-            <Link to="/signup">Sign Up</Link>
+          <Button
+            asChild
+            className="h-16 rounded-[1.5rem] bg-primary text-white font-black uppercase tracking-widest shadow-xl shadow-primary/20"
+          >
+            <Link to="/signup">Join</Link>
           </Button>
         </div>
       )}

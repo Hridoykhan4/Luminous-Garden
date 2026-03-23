@@ -1,13 +1,19 @@
 import { lazy, Suspense } from "react";
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, Navigate } from "react-router";
+
+// --- Layouts ---
 import MainLayout from "../layouts/MainLayout";
-import ErrorPage from "../pages/ErrorPage/ErrorPage";
+import DashboardLayout from "../layouts/DashboardLayout";
 
+// --- Components & Guards ---
 import PrivateRoute from "./PrivateRoute";
+import SellerRoute from "./SellerRoute";
+import AdminRoute from "./AdminRoute"; // Assuming you'll need this for ManageUsers
 import LoadingSpinner from "@/components/Shared/LoadingSpinner/LoadingSpinner";
-import ManageUsers from "@/pages/Dashboard/Admin/ManageUsers/ManageUsers";
+import ErrorPage from "../pages/ErrorPage/ErrorPage";
+import Forbidden from "@/pages/Forbidden/Forbidden";
 
-// ---  Lazy Loading Wrapper ---
+// --- 1. Optimized Lazy Loading ---
 // eslint-disable-next-line no-unused-vars
 const Loadable = (Component) => (props) => (
   <Suspense fallback={<LoadingSpinner />}>
@@ -15,57 +21,63 @@ const Loadable = (Component) => (props) => (
   </Suspense>
 );
 
-// --- Lazy Imports ---
+// --- 2. Lazy Imports (Grouped by Domain) ---
+
+// Public Pages
 const Home = Loadable(lazy(() => import("../pages/Home/Home")));
-const Login = Loadable(lazy(() => import("../pages/Login/Login")));
-const SignUp = Loadable(lazy(() => import("../pages/SignUp/SignUp")));
 const Plants = Loadable(lazy(() => import("../pages/Plants/Plants")));
-const About = Loadable(lazy(() => import("../pages/About/About")));
-const AddPlant = Loadable(
-  lazy(() => import("../pages/Dashboard/Seller/AddPlant")),
-);
 const PlantDetails = Loadable(
   lazy(() => import("../pages/PlantDetails/PlantDetails")),
 );
-const DashboardLayout = Loadable(
-  lazy(() => import("../layouts/DashboardLayout")),
-);
+const About = Loadable(lazy(() => import("../pages/About/About")));
+
+// Auth Pages
+const Login = Loadable(lazy(() => import("../pages/Login/Login")));
+const SignUp = Loadable(lazy(() => import("../pages/SignUp/SignUp")));
+
+// Dashboard: Common
 const Statistics = Loadable(
   lazy(() => import("../pages/Dashboard/Common/Statistics")),
 );
+const Profile = Loadable(
+  lazy(() => import("../pages/Dashboard/Common/Profile")),
+);
 
+// Dashboard: Seller
+const AddPlant = Loadable(
+  lazy(() => import("../pages/Dashboard/Seller/AddPlant")),
+);
+const MyInventory = Loadable(
+  lazy(() => import("../pages/Dashboard/Seller/MyInventory")),
+);
+
+// Dashboard: Admin
+const ManageUsers = Loadable(
+  lazy(() => import("../pages/Dashboard/Admin/ManageUsers")),
+);
+const AllOrders = Loadable(
+  lazy(() => import("../pages/Dashboard/Admin/AllOrders")),
+);
+
+// --- 3. Router Configuration ---
 const Router = createBrowserRouter([
   {
     path: "/",
     element: <MainLayout />,
     errorElement: <ErrorPage />,
     children: [
-      {
-        index: true,
-        element: <Home />,
-      },
-      {
-        path: "plants/:id",
-        element: <PlantDetails />,
-      },
-      {
-        path: "/plants",
-        element: <Plants></Plants>,
-      },
-      {
-        path: '/about',
-        element: <About></About>
-      }
+      { index: true, element: <Home /> },
+      { path: "plants", element: <Plants /> },
+      { path: "plants/:id", element: <PlantDetails /> },
+      { path: "about", element: <About /> },
     ],
   },
-  {
-    path: "/login",
-    element: <Login />,
-  },
-  {
-    path: "/signup",
-    element: <SignUp />,
-  },
+
+  // Auth Routes
+  { path: "/login", element: <Login /> },
+  { path: "/signup", element: <SignUp /> },
+
+  // --- Dashboard Structure ---
   {
     path: "/dashboard",
     element: (
@@ -74,22 +86,51 @@ const Router = createBrowserRouter([
       </PrivateRoute>
     ),
     children: [
-      {
-        index: true,
-        element: <Statistics />,
-      },
+      // 🟢 Common Routes
+      { index: true, element: <Statistics /> },
+      { path: "profile", element: <Profile /> },
+
+      // 🟡 Seller Routes
       {
         path: "add-plant",
-        element: <AddPlant></AddPlant>,
+        element: (
+          <SellerRoute>
+            <AddPlant />
+          </SellerRoute>
+        ),
+      },
+      {
+        path: "my-plants",
+        element: (
+          <SellerRoute>
+            <MyInventory />
+          </SellerRoute>
+        ),
       },
 
-      // Admin Routes
+      // 🔴 Admin Routes
       {
         path: "manage-users",
-        element: <ManageUsers></ManageUsers>,
+        element: (
+          <AdminRoute>
+            <ManageUsers />
+          </AdminRoute>
+        ),
+      },
+      {
+        path: "all-orders",
+        element: (
+          <AdminRoute>
+            <AllOrders />
+          </AdminRoute>
+        ),
       },
     ],
   },
+
+
+  { path: "/forbidden", element: <Forbidden /> },
+  { path: "*", element: <ErrorPage></ErrorPage>}, 
 ]);
 
 export default Router;

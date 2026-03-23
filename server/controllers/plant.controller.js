@@ -3,33 +3,35 @@ const { ObjectId } = require("mongodb");
 
 const addPlant = asyncHandler(async (req, res, plantsCollection) => {
   const plantData = req.body;
-  console.log(plantData);
-  // LOG EVERYTHING - Look at your terminal after you click Publish
-  console.log("--- DEBUG START ---");
-  console.log("Full Body:", JSON.stringify(plantData, null, 2));
-  console.log("Seller Email from Body:", plantData.seller?.email);
-  console.log("User Email from JWT:", req.user?.email);
-  console.log("--- DEBUG END ---");
 
   if (!plantData.seller?.email) {
     return res.status(400).json({
       success: false,
-      message: "Seller email is missing in request body",
+      message: "Seller identity is required in the request body",
     });
   }
 
   if (plantData.seller.email !== req.user.email) {
-    return res
-      .status(403)
-      .json({ success: false, message: "Forbidden: Identity Mismatch" });
+    return res.status(403).json({
+      success: false,
+      message: "Security Alert: Identity Mismatch detected",
+    });
   }
 
+  const { _id, ...cleanData } = plantData;
+
+  // 4. Database Operation
   const result = await plantsCollection.insertOne({
-    ...plantData,
+    ...cleanData,
     createdAt: new Date(),
+    updatedAt: new Date(),
   });
 
-  res.status(201).json({ success: true, insertedId: result.insertedId });
+  res.status(201).json({
+    success: true,
+    message: "Specimen successfully added to the garden",
+    insertedId: result.insertedId,
+  });
 });
 
 const getPlants = asyncHandler(async (req, res, plantsCollection) => {

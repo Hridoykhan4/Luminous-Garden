@@ -4,7 +4,6 @@ import { TbPlus, TbLayoutDashboard, TbLogin, TbUserPlus } from "react-icons/tb";
 
 const ActionLinks = ({ role , isRoleLoading}) => {
     if (isRoleLoading) return <div className="h-14 w-40 bg-secondary animate-pulse rounded-2xl" />;
-  // 1. Not Logged In
   if (!role) {
     return (
       <div className="flex flex-wrap gap-4">

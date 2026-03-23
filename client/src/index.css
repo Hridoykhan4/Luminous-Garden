@@ -119,7 +119,6 @@
     font-feature-settings: "cv02", "cv03", "cv04", "ss01"; 
   }
 
-  /* Custom scrollbar for a "premium" feel */
   ::-webkit-scrollbar {
     @apply w-2;
   }
@@ -132,7 +131,6 @@
 }
 
 @layer components {
-  /* Layout Helper */
   .container-page {
     @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 w-full;
   }
@@ -141,22 +139,21 @@
     @apply py-8 md:py-16;
   }
 
-  /* Glassmorphism Utility */
+ 
   .glass {
     @apply bg-card/40 backdrop-blur-xl border border-white/10 shadow-xl;
   }
 
-  /* Interaction Utility */
+
   .hover-lift {
     @apply transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg active:scale-95;
   }
 
-  /* Title Utility */
+
   .title-gradient {
     @apply bg-linear-to-br from-foreground to-foreground/60 bg-clip-text text-transparent;
   }
 
-  /* --- World-Class Shimmer Logic --- */
   .animate-shimmer {
     @apply relative overflow-hidden;
   }
@@ -171,5 +168,28 @@
       transparent
     );
     animation: shimmer 2s infinite;
+  }
+
+  .glass-header {
+    @apply sticky top-4 z-40 bg-white/80 backdrop-blur-md border border-white/20 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)];
+  }
+
+  /* Optimized Table Row - Visible by default, GSAP handles the entrance */
+  .inventory-row {
+    @apply border-b border-slate-50 transition-colors duration-300 hover:bg-slate-50/50;
+  }
+
+  /* Deep Typography */
+  .text-heading {
+    @apply font-black tracking-tighter text-slate-900;
+  }
+
+  .text-detail {
+    @apply font-bold uppercase tracking-widest text-slate-400 text-[10px];
+  }
+
+  /* Status Badges */
+  .badge-low-stock {
+    @apply bg-rose-50 text-rose-600 px-3 py-1 rounded-lg font-black animate-pulse;
   }
 }
