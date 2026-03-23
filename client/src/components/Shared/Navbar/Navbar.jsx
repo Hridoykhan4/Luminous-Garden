@@ -41,7 +41,7 @@ const Navbar = () => {
       (t) => (
         <div
           className={cn(
-            "flex flex-col p-6 min-w-[340px] shadow-[0_20px_50px_rgba(0,0,0,0.2)] rounded-[2.5rem] border-2 border-primary/20 bg-white/95 backdrop-blur-2xl transition-all duration-500",
+            "flex flex-col p-6 min-w-80 shadow-[0_20px_50px_rgba(0,0,0,0.2)] rounded-[2.5rem] border-2 border-primary/20 bg-white/95 backdrop-blur-2xl transition-all duration-500",
             t.visible
               ? "translate-y-0 opacity-100 scale-100"
               : "translate-y-10 opacity-0 scale-90",
@@ -170,7 +170,7 @@ const Navbar = () => {
                 }
               >
                 {link.label}
-        
+
                 <span
                   className={cn(
                     "absolute -bottom-5.5 left-0 h-0.5 w-0 bg-primary transition-all duration-300 group-hover:w-full",
@@ -310,13 +310,13 @@ const MobileNav = ({ navLinks, user }) => (
           <Button
             variant="outline"
             asChild
-            className="h-16 rounded-[1.5rem] font-black uppercase tracking-widest border-2"
+            className="h-16 rounded-3xl font-black uppercase tracking-widest border-2"
           >
             <Link to="/login">Login</Link>
           </Button>
           <Button
             asChild
-            className="h-16 rounded-[1.5rem] bg-primary text-white font-black uppercase tracking-widest shadow-xl shadow-primary/20"
+            className="h-16 rounded-3xl bg-primary text-white font-black uppercase tracking-widest shadow-xl shadow-primary/20"
           >
             <Link to="/signup">Join</Link>
           </Button>
