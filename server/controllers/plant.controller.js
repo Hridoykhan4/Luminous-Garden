@@ -37,61 +37,83 @@ const addPlant = asyncHandler(async (req, res, plantsCollection) => {
 
 // plant.controller.js updates
 const getPlants = asyncHandler(async (req, res, plantsCollection) => {
-  const { 
-    category, 
-    email, 
-    search, 
-    minPrice, 
-    maxPrice, 
-    page = 1, 
-    limit = 10, 
-    role 
+  const {
+    category,
+    email,
+    search,
+    minPrice,
+    maxPrice,
+    page = 1,
+    limit = 10,
+    role,
   } = req.query;
 
+  const pageNum = Math.max(1, parseInt(page));
+  const limitNum = Math.max(1, Math.min(100, parseInt(limit)));
+  const skip = (pageNum - 1) * limitNum;
+
+  // 1. Build Dynamic Filter Pipeline
   let query = {};
-
-  // 1. SaaS Status Logic
-  if (role !== "admin") {
-    query.status = { $ne: "flagged" };
-  }
-
-  // 2. Advanced Filters
+  if (role !== "admin") query.status = { $ne: "flagged" };
   if (email) query["seller.email"] = email;
   if (category) query.category = category;
-  
-  // 3. Range Filtering (SaaS Standard)
+
   if (minPrice || maxPrice) {
     query.price = {};
     if (minPrice) query.price.$gte = parseFloat(minPrice);
     if (maxPrice) query.price.$lte = parseFloat(maxPrice);
   }
 
-  // 4. Case-Insensitive Fuzzy Search
   if (search) {
     query.$or = [
       { name: { $regex: search, $options: "i" } },
-      { description: { $regex: search, $options: "i" } }
+      { category: { $regex: search, $options: "i" } },
     ];
   }
 
-  // 5. Pagination Logic
-  const skip = (parseInt(page) - 1) * parseInt(limit);
-  const lim = parseInt(limit);
+  // 2. SaaS Optimization: Execute Data and Stats in Parallel
+  const [plants, totalCount, stats] = await Promise.all([
+    plantsCollection
+      .find(query)
+      .project({ description: 0 })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum)
+      .toArray(),
 
-  const plants = await plantsCollection
-    .find(query)
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(lim)
-    .toArray();
+    plantsCollection.countDocuments(query),
 
-  const totalCount = await plantsCollection.countDocuments(query);
+    plantsCollection
+      .aggregate([
+        { $match: { status: { $ne: "flagged" } } },
+        {
+          $group: {
+            _id: null,
+            totalSellers: { $addToSet: "$seller.email" },
+            avgPrice: { $avg: "$price" },
+            totalStock: { $sum: "$quantity" },
+          },
+        },
+        {
+          $project: {
+            uniqueSellers: { $size: "$totalSellers" },
+            avgPrice: { $round: ["$avgPrice", 2] },
+            totalStock: 1,
+          },
+        },
+      ])
+      .toArray(),
+  ]);
 
   res.status(200).json({
     success: true,
-    totalCount,
-    totalPages: Math.ceil(totalCount / lim),
-    currentPage: parseInt(page),
+    meta: {
+      totalCount,
+      totalPages: Math.ceil(totalCount / limitNum),
+      currentPage: pageNum,
+      pageSize: limitNum,
+    },
+    stats: stats[0] || { uniqueSellers: 0, avgPrice: 0, totalStock: 0 },
     data: plants,
   });
 });
