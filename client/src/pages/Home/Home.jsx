@@ -23,9 +23,9 @@ const Home = () => {
   const container = useRef(null);
 
   return (
-    <main ref={container} className="relative bg-[#FAFAF9]">
+    <main ref={container} className="relative overflow-hidden bg-[#FAFAF9]">
       <div className="absolute top-0 right-0 w-100 h-100 bg-emerald-100/40 blur-[120px] rounded-full -z-10" />
-      <div className="absolute top-[20%] left-0 w-75 h-75 bg-teal-100/30 blur-[100px] rounded-full -z-10" />
+      <div className="absolute top-[20%] left-0 max-w-75 h-75 bg-teal-100/30 blur-[100px] rounded-full -z-10" />
 
       <div className="container-page">
         <Hero />

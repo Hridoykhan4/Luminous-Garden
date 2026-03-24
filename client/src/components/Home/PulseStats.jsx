@@ -102,7 +102,7 @@ const PulseStats = () => {
                     <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">
                       {stat.label}
                     </p>
-                    <div className="w-6 h-[2px] bg-emerald-500/20 mx-auto" />
+                    <div className="w-6 h-0.5 bg-emerald-500/20 mx-auto" />
                   </div>
                 </>
               )}
