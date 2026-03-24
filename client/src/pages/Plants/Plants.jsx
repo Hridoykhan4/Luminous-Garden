@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, useTransition, useRef } from "react";
+/* eslint-disable no-unused-vars */
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
@@ -13,11 +14,9 @@ import {
   TbList,
   TbX,
   TbCurrencyTaka,
-  TbSlideshow,
   TbDroplet,
   TbSun,
   TbSparkles,
-  TbSortAscending,
 } from "react-icons/tb";
 import { ShoppingBag, Coins, TrendingUp, Gem } from "lucide-react";
 
@@ -35,45 +34,53 @@ const CATEGORIES = [
   { value: "Indoor", label: "Indoor", icon: TbDroplet },
   { value: "Outdoor", label: "Outdoor", icon: TbSun },
   { value: "Flowering", label: "Flowering", icon: TbSparkles },
+  { value: "Succulent", label: "Succulent", icon: TbLeaf },
 ];
+
+const LIMIT = 8;
 
 /* ─────────────────────────────────────────
    MAIN PAGE
 ───────────────────────────────────────── */
 const Plants = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [, startTransition] = useTransition();
 
-  // Local state
-  const [search, setSearch] = useState(searchParams.get("q") || "");
+  // ── Derive all filter state directly from URL (single source of truth) ──
+  const urlSearch = searchParams.get("q") || "";
+  const urlCategory = searchParams.get("cat") || "all";
+  const urlPage = Math.max(1, parseInt(searchParams.get("page")) || 1);
+  const urlMinPrice = searchParams.get("minPrice") || "";
+  const urlMaxPrice = searchParams.get("maxPrice") || "";
+
+  // ── Local UI state (not URL-derived) ──
+  const [localSearch, setLocalSearch] = useState(urlSearch);
   const [view, setView] = useState("grid");
-  const [minPrice, setMinPrice] = useState(searchParams.get("minPrice") || "");
-  const [maxPrice, setMaxPrice] = useState(searchParams.get("maxPrice") || "");
+  const [minPrice, setMinPrice] = useState(urlMinPrice);
+  const [maxPrice, setMaxPrice] = useState(urlMaxPrice);
   const [priceOpen, setPriceOpen] = useState(false);
 
   const heroRef = useRef(null);
 
-  // URL params
-  const page = parseInt(searchParams.get("page")) || 1;
-  const category = searchParams.get("cat") || "all";
-  const limit = 8;
-
+  // ── Data fetching — always driven by URL params ──
   const {
     data: response = {},
     isLoading,
     isFetching,
     refetch,
   } = usePlants({
-    search: searchParams.get("q") || "",
-    category: category === "all" ? "" : category,
-    page,
-    limit,
-    minPrice: searchParams.get("minPrice") || "",
-    maxPrice: searchParams.get("maxPrice") || "",
+    search: urlSearch,
+    category: urlCategory === "all" ? "" : urlCategory,
+    page: urlPage,
+    limit: LIMIT,
+    minPrice: urlMinPrice,
+    maxPrice: urlMaxPrice,
   });
 
   const plants = useMemo(() => response.data || [], [response.data]);
-  const totalPages = response.totalPages || 1;
+  const totalPages = useMemo(
+    () => response.totalPages || 1,
+    [response.totalPages],
+  );
 
   const metrics = useMemo(() => {
     if (!plants.length) return { avg: 0, highest: 0, totalValue: 0 };
@@ -85,47 +92,95 @@ const Plants = () => {
     };
   }, [plants]);
 
-  /* Debounced search sync */
+  // ── FIX: Debounced search — only resets page when the *committed* search value changes ──
+  const committedSearch = useRef(urlSearch);
   useEffect(() => {
     const t = setTimeout(() => {
-      startTransition(() => {
-        setSearchParams(
-          (prev) => {
-            search ? prev.set("q", search) : prev.delete("q");
-            prev.set("page", "1");
-            return prev;
-          },
-          { replace: true },
-        );
-      });
-    }, 400);
+      if (localSearch === committedSearch.current) return; // nothing changed
+      committedSearch.current = localSearch;
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          localSearch ? next.set("q", localSearch) : next.delete("q");
+          next.set("page", "1"); // reset page only on genuine search change
+          return next;
+        },
+        { replace: true },
+      );
+    }, 380);
     return () => clearTimeout(t);
-  }, [search, setSearchParams]);
+  }, [localSearch, setSearchParams]);
 
-  /* Apply price filter */
-  const applyPriceFilter = () => {
+  // ── Sync local search if URL changes externally (e.g. back button) ──
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLocalSearch(urlSearch);
+    committedSearch.current = urlSearch;
+  }, [urlSearch]);
+
+  // ── Sync price inputs when URL changes ──
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMinPrice(urlMinPrice);
+    setMaxPrice(urlMaxPrice);
+  }, [urlMinPrice, urlMaxPrice]);
+
+  // ── Price filter helpers ──
+  const applyPriceFilter = useCallback(() => {
     setSearchParams((prev) => {
-      minPrice ? prev.set("minPrice", minPrice) : prev.delete("minPrice");
-      maxPrice ? prev.set("maxPrice", maxPrice) : prev.delete("maxPrice");
-      prev.set("page", "1");
-      return prev;
+      const next = new URLSearchParams(prev);
+      minPrice ? next.set("minPrice", minPrice) : next.delete("minPrice");
+      maxPrice ? next.set("maxPrice", maxPrice) : next.delete("maxPrice");
+      next.set("page", "1");
+      return next;
     });
     setPriceOpen(false);
-  };
+  }, [minPrice, maxPrice, setSearchParams]);
 
-  const clearPriceFilter = () => {
+  const clearPriceFilter = useCallback(() => {
     setMinPrice("");
     setMaxPrice("");
     setSearchParams((prev) => {
-      prev.delete("minPrice");
-      prev.delete("maxPrice");
-      prev.set("page", "1");
-      return prev;
+      const next = new URLSearchParams(prev);
+      next.delete("minPrice");
+      next.delete("maxPrice");
+      next.set("page", "1");
+      return next;
     });
     setPriceOpen(false);
-  };
+  }, [setSearchParams]);
 
-  /* GSAP hero entrance */
+  // ── FIX: Stable pagination handler — reads page from URL at call time ──
+  const goToPage = useCallback(
+    (targetPage) => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        const current = Math.max(1, parseInt(next.get("page")) || 1);
+        const maxPages = parseInt(next.get("_tp")) || 9999; // we store totalPages below
+        const clamped = Math.max(1, Math.min(targetPage, maxPages));
+        if (clamped === current) return prev; // no-op
+        next.set("page", String(clamped));
+        return next;
+      });
+    },
+    [setSearchParams],
+  );
+
+  // Store totalPages in URL so goToPage can clamp safely without stale closure
+  useEffect(() => {
+    if (!isLoading && totalPages > 0) {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.set("_tp", String(totalPages));
+          return next;
+        },
+        { replace: true },
+      );
+    }
+  }, [totalPages, isLoading, setSearchParams]);
+
+  /* GSAP — hero entrance */
   useGSAP(() => {
     const ctx = gsap.context(() => {
       gsap.from(".hero-word", {
@@ -156,7 +211,7 @@ const Plants = () => {
     return () => ctx.revert();
   }, []);
 
-  /* Card entrance */
+  /* GSAP — card entrance on data change */
   useGSAP(() => {
     if (!isLoading && plants.length > 0) {
       gsap.fromTo(
@@ -174,61 +229,110 @@ const Plants = () => {
     }
   }, [plants, isLoading]);
 
-  const hasPriceFilter =
-    searchParams.get("minPrice") || searchParams.get("maxPrice");
+  const hasPriceFilter = urlMinPrice || urlMaxPrice;
+
   const activeFilters = [
-    category !== "all" && {
-      label: CATEGORIES.find((c) => c.value === category)?.label,
+    urlCategory !== "all" && {
+      label: CATEGORIES.find((c) => c.value === urlCategory)?.label,
       clear: () =>
         setSearchParams((p) => {
-          p.set("cat", "all");
-          p.set("page", "1");
-          return p;
+          const n = new URLSearchParams(p);
+          n.set("cat", "all");
+          n.set("page", "1");
+          return n;
         }),
     },
-    search && { label: `"${search}"`, clear: () => setSearch("") },
+    localSearch && {
+      label: `"${localSearch}"`,
+      clear: () => setLocalSearch(""),
+    },
     hasPriceFilter && {
-      label: `৳${searchParams.get("minPrice") || "0"} – ৳${searchParams.get("maxPrice") || "∞"}`,
+      label: `৳${urlMinPrice || "0"} – ৳${urlMaxPrice || "∞"}`,
       clear: clearPriceFilter,
     },
   ].filter(Boolean);
 
+  const clearAll = useCallback(() => {
+    setLocalSearch("");
+    setMinPrice("");
+    setMaxPrice("");
+    committedSearch.current = "";
+    setSearchParams({ cat: "all", page: "1" });
+  }, [setSearchParams]);
+
   return (
     <div className="min-h-screen" style={{ background: "var(--background)" }}>
-      {/* ══ HERO ══════════════════════════════════════════ */}
+      {/* ══ HERO — NEXT WORLD LEVEL ════════════════════════════════════════ */}
       <section
         ref={heroRef}
         style={{
           background:
-            "linear-gradient(170deg, oklch(0.12 0.025 160) 0%, oklch(0.16 0.02 160) 60%, var(--background) 100%)",
-          paddingTop: 72,
-          paddingBottom: 64,
+            "linear-gradient(170deg, oklch(0.10 0.03 160) 0%, oklch(0.14 0.025 160) 55%, var(--background) 100%)",
+          paddingTop: 80,
+          paddingBottom: 80,
           position: "relative",
           overflow: "hidden",
+          isolation: "isolate",
         }}
       >
-        {/* ambient glow */}
+        {/* Layered ambient orbs */}
         <div
           style={{
             position: "absolute",
-            top: -80,
-            left: "15%",
-            width: 520,
-            height: 520,
-            borderRadius: "50%",
-            background:
-              "radial-gradient(circle, oklch(0.55 0.18 160 / 0.12) 0%, transparent 70%)",
-            filter: "blur(40px)",
+            inset: 0,
             pointerEvents: "none",
+            zIndex: 0,
           }}
-        />
+        >
+          <div
+            style={{
+              position: "absolute",
+              top: "-10%",
+              left: "5%",
+              width: 700,
+              height: 700,
+              borderRadius: "50%",
+              background:
+                "radial-gradient(circle, oklch(0.55 0.2 160 / 0.10) 0%, transparent 70%)",
+              filter: "blur(60px)",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              bottom: "0%",
+              right: "-5%",
+              width: 500,
+              height: 500,
+              borderRadius: "50%",
+              background:
+                "radial-gradient(circle, oklch(0.50 0.14 200 / 0.08) 0%, transparent 70%)",
+              filter: "blur(50px)",
+            }}
+          />
+          {/* Fine grid overlay */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              backgroundImage:
+                "linear-gradient(oklch(0.55 0.18 160 / 0.04) 1px, transparent 1px), linear-gradient(90deg, oklch(0.55 0.18 160 / 0.04) 1px, transparent 1px)",
+              backgroundSize: "48px 48px",
+              maskImage:
+                "radial-gradient(ellipse 80% 60% at 50% 50%, black 40%, transparent 100%)",
+            }}
+          />
+        </div>
 
-        <div className="container-page" style={{ position: "relative" }}>
+        <div
+          className="container-page"
+          style={{ position: "relative", zIndex: 1 }}
+        >
           {/* Eyebrow pill */}
           <div
             className="hero-sub"
             style={{
-              marginBottom: 22,
+              marginBottom: 28,
               display: "flex",
               alignItems: "center",
               gap: 8,
@@ -238,15 +342,16 @@ const Plants = () => {
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                gap: 7,
-                padding: "5px 16px",
+                gap: 8,
+                padding: "6px 18px",
                 borderRadius: 999,
-                border: "1px solid oklch(0.55 0.18 160 / 0.35)",
-                background: "oklch(0.55 0.18 160 / 0.1)",
-                color: "oklch(0.75 0.16 160)",
-                fontSize: 11,
-                fontWeight: 800,
-                letterSpacing: "0.18em",
+                border: "1px solid oklch(0.55 0.18 160 / 0.30)",
+                background: "oklch(0.55 0.18 160 / 0.08)",
+                backdropFilter: "blur(12px)",
+                color: "oklch(0.78 0.16 160)",
+                fontSize: 10,
+                fontWeight: 900,
+                letterSpacing: "0.22em",
                 textTransform: "uppercase",
               }}
             >
@@ -256,75 +361,138 @@ const Plants = () => {
                   height: 6,
                   borderRadius: "50%",
                   background: "oklch(0.72 0.2 160)",
-                  boxShadow: "0 0 10px oklch(0.72 0.2 160)",
+                  boxShadow: "0 0 12px oklch(0.72 0.2 160)",
                   animation: "lg-pulse 2s ease-in-out infinite",
                 }}
               />
-              Live Botanical Index
+              Live Botanical Index · Bangladesh
             </span>
           </div>
 
-          {/* Title */}
-          <div style={{ overflow: "hidden", marginBottom: 4 }}>
-            <h1
-              className="hero-word"
+          {/* Headline — editorial split */}
+          <div style={{ marginBottom: 32 }}>
+            <div style={{ overflow: "hidden" }}>
+              <h1
+                className="hero-word"
+                style={{
+                  fontFamily: "'Georgia', 'Times New Roman', serif",
+                  fontSize: "clamp(4rem, 10vw, 9rem)",
+                  fontWeight: 900,
+                  lineHeight: 0.85,
+                  letterSpacing: "-0.045em",
+                  margin: 0,
+                  background:
+                    "linear-gradient(135deg, oklch(0.97 0.015 160) 0%, oklch(0.78 0.16 160) 60%, oklch(0.52 0.2 160) 100%)",
+                  WebkitBackgroundClip: "text",
+                  backgroundClip: "text",
+                  color: "transparent",
+                }}
+              >
+                Specimen
+              </h1>
+            </div>
+            <div
               style={{
-                fontFamily: "'Georgia', 'Times New Roman', serif",
-                fontSize: "clamp(3.2rem, 8vw, 7.5rem)",
-                fontWeight: 900,
-                lineHeight: 0.88,
-                letterSpacing: "-0.04em",
-                background:
-                  "linear-gradient(135deg, oklch(0.96 0.02 160) 0%, oklch(0.75 0.16 160) 55%, oklch(0.5 0.18 160) 100%)",
-                WebkitBackgroundClip: "text",
-                backgroundClip: "text",
-                color: "transparent",
-                margin: 0,
+                overflow: "hidden",
+                display: "flex",
+                alignItems: "baseline",
+                gap: 24,
               }}
             >
-              Specimen
-            </h1>
-          </div>
-          <div style={{ overflow: "hidden", marginBottom: 28 }}>
-            <h1
-              className="hero-word"
-              style={{
-                fontFamily: "'Georgia', 'Times New Roman', serif",
-                fontSize: "clamp(3.2rem, 8vw, 7.5rem)",
-                fontWeight: 900,
-                lineHeight: 0.88,
-                letterSpacing: "-0.04em",
-                color: "oklch(0.94 0.02 160 / 0.18)",
-                fontStyle: "italic",
-                margin: 0,
-              }}
-            >
-              Vault
-            </h1>
+              <h1
+                className="hero-word"
+                style={{
+                  fontFamily: "'Georgia', 'Times New Roman', serif",
+                  fontSize: "clamp(4rem, 10vw, 9rem)",
+                  fontWeight: 100,
+                  lineHeight: 0.85,
+                  letterSpacing: "-0.03em",
+                  margin: 0,
+                  fontStyle: "italic",
+                  color: "oklch(0.94 0.02 160 / 0.15)",
+                }}
+              >
+                Vault
+              </h1>
+              {/* Accent line */}
+              <div
+                style={{
+                  flex: 1,
+                  height: 2,
+                  maxWidth: 180,
+                  background:
+                    "linear-gradient(90deg, oklch(0.72 0.2 160 / 0.6), transparent)",
+                  borderRadius: 2,
+                  marginBottom: 8,
+                }}
+              />
+            </div>
           </div>
 
-          <p
-            className="hero-sub"
+          {/* 2-col layout: description left, marquee-style right */}
+          <div
             style={{
-              color: "oklch(0.75 0.04 160 / 0.55)",
-              fontSize: 15,
-              lineHeight: 1.75,
-              maxWidth: 440,
+              display: "grid",
+              gridTemplateColumns: "1fr auto",
+              gap: 40,
+              alignItems: "end",
               marginBottom: 48,
             }}
           >
-            Curated living specimens from elite local growers. Every plant, a
-            story.
-          </p>
+            <p
+              className="hero-sub"
+              style={{
+                color: "oklch(0.72 0.04 160 / 0.55)",
+                fontSize: 15,
+                lineHeight: 1.8,
+                maxWidth: 420,
+                borderLeft: "2px solid oklch(0.55 0.18 160 / 0.3)",
+                paddingLeft: 16,
+                margin: 0,
+              }}
+            >
+              Curated living specimens from elite local growers.
+              <br />
+              Every plant, a story worth collecting.
+            </p>
 
-          {/* Stat chips */}
+            {/* Rotating tag cloud */}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+                opacity: 0.55,
+                alignSelf: "center",
+              }}
+            >
+              {["INDOOR", "OUTDOOR", "FLOWERING", "SUCCULENT"].map((tag, i) => (
+                <span
+                  key={tag}
+                  className="hero-sub"
+                  style={{
+                    fontSize: 9,
+                    fontWeight: 900,
+                    letterSpacing: "0.22em",
+                    color: "oklch(0.7 0.12 160)",
+                    opacity: 1 - i * 0.2,
+                    textAlign: "right",
+                  }}
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Stat chips — redesigned */}
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             {[
               {
                 label: "Specimens",
                 value: response.totalCount || 0,
                 icon: ShoppingBag,
-                accent: "oklch(0.7 0.2 160)",
+                accent: "oklch(0.70 0.20 160)",
               },
               {
                 label: "Avg Price",
@@ -342,7 +510,7 @@ const Plants = () => {
                 label: "Vault Worth",
                 value: `৳${metrics.totalValue.toLocaleString()}`,
                 icon: Gem,
-                accent: "oklch(0.72 0.2 340)",
+                accent: "oklch(0.72 0.20 340)",
               },
             ].map(({ label, value, icon: Icon, accent }) => (
               <div
@@ -351,34 +519,61 @@ const Plants = () => {
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 10,
-                  padding: "10px 16px",
-                  borderRadius: 14,
-                  border: `1px solid ${accent}33`,
-                  background: `${accent}0f`,
-                  backdropFilter: "blur(10px)",
+                  gap: 12,
+                  padding: "12px 18px",
+                  borderRadius: 16,
+                  border: `1px solid ${accent}2e`,
+                  background: `${accent}0c`,
+                  backdropFilter: "blur(16px)",
+                  position: "relative",
+                  overflow: "hidden",
                 }}
               >
-                <Icon size={15} style={{ color: accent, flexShrink: 0 }} />
+                {/* subtle shimmer line */}
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: 1,
+                    background: `linear-gradient(90deg, transparent, ${accent}44, transparent)`,
+                  }}
+                />
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 10,
+                    background: `${accent}14`,
+                    border: `1px solid ${accent}22`,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  <Icon size={14} style={{ color: accent }} />
+                </div>
                 <div>
                   <div
                     style={{
-                      fontSize: 10,
-                      fontWeight: 800,
-                      letterSpacing: "0.12em",
+                      fontSize: 9,
+                      fontWeight: 900,
+                      letterSpacing: "0.14em",
                       textTransform: "uppercase",
-                      color: "oklch(0.7 0.03 160)",
-                      marginBottom: 1,
+                      color: "oklch(0.65 0.03 160)",
+                      marginBottom: 2,
                     }}
                   >
                     {label}
                   </div>
                   <div
                     style={{
-                      fontSize: 16,
+                      fontSize: 17,
                       fontWeight: 900,
-                      color: "oklch(0.95 0.02 160)",
-                      letterSpacing: "-0.02em",
+                      color: "oklch(0.96 0.02 160)",
+                      letterSpacing: "-0.025em",
                     }}
                   >
                     {value}
@@ -405,7 +600,7 @@ const Plants = () => {
           className="container-page"
           style={{ paddingTop: 12, paddingBottom: 12 }}
         >
-          {/* Category Pills */}
+          {/* Category pills */}
           <div
             style={{
               display: "flex",
@@ -415,15 +610,16 @@ const Plants = () => {
             }}
           >
             {CATEGORIES.map(({ value, label, icon: Icon }) => {
-              const active = category === value;
+              const active = urlCategory === value;
               return (
                 <button
                   key={value}
                   onClick={() =>
                     setSearchParams((p) => {
-                      p.set("cat", value);
-                      p.set("page", "1");
-                      return p;
+                      const n = new URLSearchParams(p);
+                      n.set("cat", value);
+                      n.set("page", "1");
+                      return n;
                     })
                   }
                   style={{
@@ -443,7 +639,7 @@ const Plants = () => {
                     fontSize: 11,
                     fontWeight: 700,
                     letterSpacing: "0.07em",
-                    transition: "all 0.2s",
+                    transition: "all 0.18s",
                   }}
                 >
                   <Icon size={12} />
@@ -453,7 +649,7 @@ const Plants = () => {
             })}
           </div>
 
-          {/* Search + controls row */}
+          {/* Search + controls */}
           <div
             style={{
               display: "flex",
@@ -479,14 +675,14 @@ const Plants = () => {
                 }}
               />
               <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                value={localSearch}
+                onChange={(e) => setLocalSearch(e.target.value)}
                 placeholder="Search by name or description..."
                 style={{
                   width: "100%",
                   height: 42,
                   paddingLeft: 40,
-                  paddingRight: search ? 40 : 14,
+                  paddingRight: localSearch ? 40 : 14,
                   borderRadius: 12,
                   border: "1px solid var(--border)",
                   background: "var(--accent)",
@@ -495,13 +691,14 @@ const Plants = () => {
                   fontWeight: 500,
                   outline: "none",
                   transition: "border-color 0.2s",
+                  boxSizing: "border-box",
                 }}
                 onFocus={(e) => (e.target.style.borderColor = "var(--primary)")}
                 onBlur={(e) => (e.target.style.borderColor = "var(--border)")}
               />
-              {search && (
+              {localSearch && (
                 <button
-                  onClick={() => setSearch("")}
+                  onClick={() => setLocalSearch("")}
                   style={{
                     position: "absolute",
                     right: 12,
@@ -520,7 +717,7 @@ const Plants = () => {
               )}
             </div>
 
-            {/* Price Range Button */}
+            {/* Price range */}
             <div style={{ position: "relative" }}>
               <button
                 onClick={() => setPriceOpen((v) => !v)}
@@ -550,11 +747,10 @@ const Plants = () => {
               >
                 <TbCurrencyTaka size={15} />
                 {hasPriceFilter
-                  ? `৳${searchParams.get("minPrice") || "0"} – ৳${searchParams.get("maxPrice") || "∞"}`
+                  ? `৳${urlMinPrice || "0"} – ৳${urlMaxPrice || "∞"}`
                   : "Price Range"}
               </button>
 
-              {/* Dropdown */}
               {priceOpen && (
                 <div
                   style={{
@@ -583,80 +779,59 @@ const Plants = () => {
                     Budget Range
                   </p>
                   <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
-                    <div style={{ flex: 1 }}>
-                      <label
-                        style={{
-                          fontSize: 10,
-                          fontWeight: 700,
-                          color: "var(--muted-foreground)",
-                          display: "block",
-                          marginBottom: 5,
-                        }}
-                      >
-                        MIN (৳)
-                      </label>
-                      <input
-                        type="number"
-                        value={minPrice}
-                        onChange={(e) => setMinPrice(e.target.value)}
-                        placeholder="0"
-                        style={{
-                          width: "100%",
-                          height: 38,
-                          padding: "0 12px",
-                          borderRadius: 10,
-                          border: "1px solid var(--border)",
-                          background: "var(--accent)",
-                          color: "var(--foreground)",
-                          fontSize: 14,
-                          fontWeight: 700,
-                          outline: "none",
-                        }}
-                        onFocus={(e) =>
-                          (e.target.style.borderColor = "var(--primary)")
-                        }
-                        onBlur={(e) =>
-                          (e.target.style.borderColor = "var(--border)")
-                        }
-                      />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <label
-                        style={{
-                          fontSize: 10,
-                          fontWeight: 700,
-                          color: "var(--muted-foreground)",
-                          display: "block",
-                          marginBottom: 5,
-                        }}
-                      >
-                        MAX (৳)
-                      </label>
-                      <input
-                        type="number"
-                        value={maxPrice}
-                        onChange={(e) => setMaxPrice(e.target.value)}
-                        placeholder="∞"
-                        style={{
-                          width: "100%",
-                          height: 38,
-                          padding: "0 12px",
-                          borderRadius: 10,
-                          border: "1px solid var(--border)",
-                          background: "var(--accent)",
-                          color: "var(--foreground)",
-                          fontSize: 14,
-                          fontWeight: 700,
-                          outline: "none",
-                        }}
-                        onFocus={(e) =>
-                          (e.target.style.borderColor = "var(--primary)")
-                        }
-                        onBlur={(e) =>
-                          (e.target.style.borderColor = "var(--border)")
-                        }
-                      />
-                    </div>
+                    {[
+                      {
+                        label: "MIN (৳)",
+                        val: minPrice,
+                        set: setMinPrice,
+                        ph: "0",
+                      },
+                      {
+                        label: "MAX (৳)",
+                        val: maxPrice,
+                        set: setMaxPrice,
+                        ph: "∞",
+                      },
+                    ].map(({ label, val, set, ph }) => (
+                      <div key={label} style={{ flex: 1 }}>
+                        <label
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 700,
+                            color: "var(--muted-foreground)",
+                            display: "block",
+                            marginBottom: 5,
+                          }}
+                        >
+                          {label}
+                        </label>
+                        <input
+                          type="number"
+                          value={val}
+                          onChange={(e) => set(e.target.value)}
+                          placeholder={ph}
+                          style={{
+                            width: "100%",
+                            height: 38,
+                            padding: "0 12px",
+                            borderRadius: 10,
+                            border: "1px solid var(--border)",
+                            background: "var(--accent)",
+                            color: "var(--foreground)",
+                            fontSize: 14,
+                            fontWeight: 700,
+                            outline: "none",
+                            boxSizing: "border-box",
+                          }}
+                          onFocus={(e) =>
+                            (e.target.style.borderColor = "var(--primary)")
+                          }
+                          onBlur={(e) =>
+                            (e.target.style.borderColor = "var(--border)")
+                          }
+                        />
+                      </div>
+                    ))}
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
                     <button
@@ -738,7 +913,7 @@ const Plants = () => {
               ))}
             </div>
 
-            {/* Sync button */}
+            {/* Sync */}
             <button
               onClick={() => refetch()}
               style={{
@@ -755,7 +930,6 @@ const Plants = () => {
                 fontSize: 12,
                 fontWeight: 800,
                 letterSpacing: "0.08em",
-                boxShadow: "0 4px 16px var(--primary) / 0.25",
                 transition: "opacity 0.2s, transform 0.2s",
               }}
               onMouseEnter={(e) =>
@@ -819,12 +993,7 @@ const Plants = () => {
                 </button>
               ))}
               <button
-                onClick={() => {
-                  setSearch("");
-                  setMinPrice("");
-                  setMaxPrice("");
-                  setSearchParams({ cat: "all" });
-                }}
+                onClick={clearAll}
                 style={{
                   fontSize: 11,
                   color: "var(--primary)",
@@ -891,7 +1060,7 @@ const Plants = () => {
                 color: "var(--muted-foreground)",
               }}
             >
-              Page {page} / {totalPages}
+              Page {urlPage} / {totalPages}
             </p>
           </div>
         )}
@@ -909,7 +1078,7 @@ const Plants = () => {
                 gap: view === "grid" ? 24 : 12,
               }}
             >
-              {[...Array(limit)].map((_, i) => (
+              {[...Array(LIMIT)].map((_, i) => (
                 <PlantSkeleton key={i} />
               ))}
             </div>
@@ -931,18 +1100,11 @@ const Plants = () => {
               ))}
             </div>
           ) : (
-            <EmptyState
-              onReset={() => {
-                setSearch("");
-                setMinPrice("");
-                setMaxPrice("");
-                setSearchParams({ cat: "all" });
-              }}
-            />
+            <EmptyState onReset={clearAll} />
           )}
         </div>
 
-        {/* Pagination */}
+        {/* ── PAGINATION — fixed ── */}
         {!isLoading && totalPages > 1 && (
           <div
             style={{
@@ -955,14 +1117,10 @@ const Plants = () => {
           >
             <PaginationBtn
               icon={TbChevronLeft}
-              disabled={page === 1}
-              onClick={() =>
-                setSearchParams((p) => {
-                  p.set("page", page - 1);
-                  return p;
-                })
-              }
+              disabled={urlPage <= 1}
+              onClick={() => goToPage(urlPage - 1)}
             />
+
             <div
               style={{
                 display: "flex",
@@ -973,47 +1131,59 @@ const Plants = () => {
                 background: "var(--card)",
               }}
             >
-              {[...Array(totalPages)].map((_, i) => {
-                const a = page === i + 1;
-                return (
+              {/* Smart window: always show first, last, current ±1, with ellipsis */}
+              {buildPageWindow(urlPage, totalPages).map((item, idx) =>
+                item === "…" ? (
+                  <span
+                    key={`ellipsis-${idx}`}
+                    style={{
+                      width: 40,
+                      height: 40,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 12,
+                      fontWeight: 800,
+                      color: "var(--muted-foreground)",
+                    }}
+                  >
+                    …
+                  </span>
+                ) : (
                   <button
-                    key={i}
-                    onClick={() =>
-                      setSearchParams((p) => {
-                        p.set("page", i + 1);
-                        return p;
-                      })
-                    }
+                    key={item}
+                    onClick={() => goToPage(item)}
                     style={{
                       width: 40,
                       height: 40,
                       borderRadius: 10,
                       border: "none",
                       cursor: "pointer",
-                      background: a ? "var(--primary)" : "transparent",
-                      color: a
-                        ? "var(--primary-foreground)"
-                        : "var(--muted-foreground)",
+                      background:
+                        urlPage === item ? "var(--primary)" : "transparent",
+                      color:
+                        urlPage === item
+                          ? "var(--primary-foreground)"
+                          : "var(--muted-foreground)",
                       fontSize: 12,
                       fontWeight: 800,
                       transition: "all 0.18s",
-                      boxShadow: a ? "0 4px 14px var(--primary) / 0.3" : "none",
+                      boxShadow:
+                        urlPage === item
+                          ? "0 4px 14px oklch(0.55 0.18 160 / 0.3)"
+                          : "none",
                     }}
                   >
-                    {String(i + 1).padStart(2, "0")}
+                    {String(item).padStart(2, "0")}
                   </button>
-                );
-              })}
+                ),
+              )}
             </div>
+
             <PaginationBtn
               icon={TbChevronRight}
-              disabled={page === totalPages}
-              onClick={() =>
-                setSearchParams((p) => {
-                  p.set("page", page + 1);
-                  return p;
-                })
-              }
+              disabled={urlPage >= totalPages}
+              onClick={() => goToPage(urlPage + 1)}
             />
           </div>
         )}
@@ -1021,14 +1191,34 @@ const Plants = () => {
 
       {/* Global keyframes */}
       <style>{`
-        @keyframes lg-spin  { to { transform: rotate(360deg); } }
-        @keyframes lg-pulse { 0%,100%{opacity:1;box-shadow:0 0 10px oklch(0.72 0.2 160)} 50%{opacity:.6;box-shadow:0 0 18px oklch(0.72 0.2 160)} }
+        @keyframes lg-spin  { to { transform: translateY(-50%) rotate(360deg); } }
+        @keyframes lg-pulse {
+          0%,100% { opacity:1; box-shadow:0 0 10px oklch(0.72 0.2 160) }
+          50%      { opacity:.6; box-shadow:0 0 20px oklch(0.72 0.2 160) }
+        }
       `}</style>
     </div>
   );
 };
 
-/* ── helpers ── */
+/* ── Build a smart page window to avoid rendering 50+ buttons ── */
+function buildPageWindow(current, total) {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const set = new Set(
+    [1, total, current, current - 1, current + 1].filter(
+      (n) => n >= 1 && n <= total,
+    ),
+  );
+  const sorted = [...set].sort((a, b) => a - b);
+  const result = [];
+  for (let i = 0; i < sorted.length; i++) {
+    if (i > 0 && sorted[i] - sorted[i - 1] > 1) result.push("…");
+    result.push(sorted[i]);
+  }
+  return result;
+}
+
+/* ── Sub-components ── */
 const PaginationBtn = ({ icon: Icon, disabled, onClick }) => (
   <button
     disabled={disabled}

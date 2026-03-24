@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import useAxiosPublic from "./useAxiosPublic";
 import useUserRole from "./useUserRole";
 
@@ -17,18 +17,29 @@ const usePlants = ({
   return useQuery({
     queryKey: [
       "plants",
-      { email, limit, page, search, category, role, minPrice, maxPrice },
+      JSON.stringify({
+        email,
+        limit,
+        page,
+        search,
+        category,
+        role,
+        minPrice,
+        maxPrice,
+      }),
     ],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const params = { email, limit, page, search, category, role };
       if (minPrice) params.minPrice = minPrice;
       if (maxPrice) params.maxPrice = maxPrice;
 
-      const { data } = await axiosPublic.get(`/plants`, { params });
-      return data; // { success, data, totalCount, totalPages, currentPage }
+      const { data } = await axiosPublic.get("/plants", { params, signal });
+      return data; 
     },
-    placeholderData: (prev) => prev,
-    staleTime: 1000 * 60 * 5,
+    placeholderData: keepPreviousData,
+    staleTime: 1000 * 60 * 5, 
+    gcTime: 1000 * 60 * 10,
+    refetchOnWindowFocus: false,
   });
 };
 

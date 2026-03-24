@@ -7,28 +7,41 @@ import {
   TbEye,
   TbAlertTriangle,
   TbLeaf,
-  TbShoppingCart,
   TbArrowUpRight,
 } from "react-icons/tb";
 import useUserRole from "@/hooks/useUserRole";
 import useAuth from "@/hooks/useAuth";
 import useAxiosSecure from "@/hooks/useAxiosSecure";
 import toast from "react-hot-toast";
-import { cn } from "@/lib/utils";
 
-/* ─────────────────────────────────────────────
-   CATEGORY ACCENT MAP
-───────────────────────────────────────────── */
+/* ── NEXT-LEVEL BOTANICAL ACCENTS ── */
 const CATEGORY_ACCENT = {
-  Indoor: { color: "oklch(0.62 0.16 220)", bg: "oklch(0.62 0.16 220 / 0.12)" },
-  Outdoor: { color: "oklch(0.65 0.18 145)", bg: "oklch(0.65 0.18 145 / 0.12)" },
-  Flowering: { color: "oklch(0.68 0.2 340)", bg: "oklch(0.68 0.2 340 / 0.12)" },
-  default: { color: "var(--primary)", bg: "var(--secondary)" },
+  Indoor: {
+    color: "oklch(0.45 0.08 220)", // Deep, legible Blue
+    bg: "oklch(0.96 0.02 220)", // Soft, tinted White
+    border: "oklch(0.45 0.08 220 / 0.15)",
+    glow: "oklch(0.45 0.08 220 / 0.08)",
+  },
+  Outdoor: {
+    color: "oklch(0.42 0.09 150)", // Deep Forest Green
+    bg: "oklch(0.96 0.02 150)", // Soft, tinted White
+    border: "oklch(0.42 0.09 150 / 0.15)",
+    glow: "oklch(0.42 0.09 150 / 0.08)",
+  },
+  Flowering: {
+    color: "oklch(0.48 0.12 15)", // Sophisticated Rose/Muted Red
+    bg: "oklch(0.97 0.02 15)", // Soft, tinted White
+    border: "oklch(0.48 0.12 15 / 0.15)",
+    glow: "oklch(0.48 0.12 15 / 0.08)",
+  },
+  default: {
+    color: "var(--primary)",
+    bg: "var(--secondary)",
+    border: "var(--border)",
+    glow: "rgba(0,0,0,0.05)",
+  },
 };
 
-/* ─────────────────────────────────────────────
-   PLANT CARD
-───────────────────────────────────────────── */
 const PlantCard = ({ plant, refetch, view = "grid" }) => {
   const { user } = useAuth();
   const { role } = useUserRole();
@@ -60,7 +73,6 @@ const PlantCard = ({ plant, refetch, view = "grid" }) => {
     gsap.set(shineRef.current, { x: "-100%" });
   };
 
-  /* ── flag / terminate ── */
   const handleTerminate = async () => {
     if (!window.confirm("Restrict this plant from public view?")) return;
     try {
@@ -101,7 +113,7 @@ const PlantCard = ({ plant, refetch, view = "grid" }) => {
         onMouseEnter={(e) => {
           onEnter();
           e.currentTarget.style.borderColor = accent.color;
-          e.currentTarget.style.boxShadow = `0 8px 32px ${accent.color}22`;
+          e.currentTarget.style.boxShadow = `0 8px 32px ${accent.glow}`;
         }}
         onMouseLeave={(e) => {
           onLeave();
@@ -109,10 +121,9 @@ const PlantCard = ({ plant, refetch, view = "grid" }) => {
           e.currentTarget.style.boxShadow = "none";
         }}
       >
-        {/* Image */}
         <div
           style={{
-            width: 120,
+            width: 140,
             flexShrink: 0,
             overflow: "hidden",
             position: "relative",
@@ -146,14 +157,13 @@ const PlantCard = ({ plant, refetch, view = "grid" }) => {
           )}
         </div>
 
-        {/* Content */}
         <div
           style={{
             flex: 1,
-            padding: "18px 20px",
+            padding: "18px 24px",
             display: "flex",
             alignItems: "center",
-            gap: 16,
+            gap: 24,
             flexWrap: "wrap",
           }}
         >
@@ -163,20 +173,19 @@ const PlantCard = ({ plant, refetch, view = "grid" }) => {
                 display: "flex",
                 alignItems: "center",
                 gap: 8,
-                marginBottom: 5,
+                marginBottom: 8,
               }}
             >
               <span
                 style={{
-                  fontSize: 9,
-                  fontWeight: 800,
-                  letterSpacing: "0.14em",
-                  textTransform: "uppercase",
-                  padding: "3px 9px",
-                  borderRadius: 999,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: "0.05em",
+                  padding: "4px 12px",
+                  borderRadius: 6,
                   background: accent.bg,
                   color: accent.color,
-                  border: `1px solid ${accent.color}44`,
+                  border: `1px solid ${accent.border}`,
                 }}
               >
                 {plant.category}
@@ -184,15 +193,13 @@ const PlantCard = ({ plant, refetch, view = "grid" }) => {
               {isOutOfStock && !isFlagged && (
                 <span
                   style={{
-                    fontSize: 9,
-                    fontWeight: 800,
-                    letterSpacing: "0.12em",
-                    textTransform: "uppercase",
-                    color: "oklch(0.55 0.22 25)",
-                    padding: "3px 9px",
-                    borderRadius: 999,
-                    background: "oklch(0.55 0.22 25 / 0.1)",
-                    border: "1px solid oklch(0.55 0.22 25 / 0.3)",
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: "oklch(0.5 0.15 25)",
+                    padding: "4px 12px",
+                    borderRadius: 6,
+                    background: "oklch(0.98 0.01 25)",
+                    border: "1px solid oklch(0.5 0.15 25 / 0.15)",
                   }}
                 >
                   Sold Out
@@ -202,48 +209,46 @@ const PlantCard = ({ plant, refetch, view = "grid" }) => {
             <h3
               style={{
                 fontFamily: "'Georgia', serif",
-                fontSize: 18,
+                fontSize: 20,
                 fontWeight: 900,
-                letterSpacing: "-0.02em",
                 color: "var(--foreground)",
                 fontStyle: "italic",
                 lineHeight: 1.2,
-                marginBottom: 3,
+                marginBottom: 4,
               }}
             >
               {plant.name}
             </h3>
             <p
               style={{
-                fontSize: 12,
+                fontSize: 13,
                 color: "var(--muted-foreground)",
-                fontWeight: 600,
+                fontWeight: 500,
               }}
             >
-              {plant.seller?.name}
+              Listed by {plant.seller?.name}
             </p>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
             <div style={{ textAlign: "right" }}>
               <div
                 style={{
                   fontSize: 10,
                   fontWeight: 800,
-                  letterSpacing: "0.12em",
                   textTransform: "uppercase",
                   color: "var(--muted-foreground)",
-                  marginBottom: 2,
+                  marginBottom: 4,
+                  opacity: 0.7,
                 }}
               >
                 Price
               </div>
               <div
                 style={{
-                  fontSize: 22,
+                  fontSize: 24,
                   fontWeight: 900,
                   color: "var(--foreground)",
-                  letterSpacing: "-0.03em",
                   fontFamily: "'Georgia', serif",
                 }}
               >
@@ -276,12 +281,11 @@ const PlantCard = ({ plant, refetch, view = "grid" }) => {
         transition: "border-color 0.3s, box-shadow 0.3s",
         cursor: "default",
         position: "relative",
-        filter: isFlagged ? "grayscale(0.6)" : "none",
       }}
       onMouseEnter={(e) => {
         onEnter();
-        e.currentTarget.style.borderColor = `${accent.color}88`;
-        e.currentTarget.style.boxShadow = `0 16px 48px ${accent.color}1a, 0 4px 16px rgba(0,0,0,0.08)`;
+        e.currentTarget.style.borderColor = accent.color;
+        e.currentTarget.style.boxShadow = `0 20px 40px ${accent.glow}, 0 4px 12px rgba(0,0,0,0.05)`;
       }}
       onMouseLeave={(e) => {
         onLeave();
@@ -289,12 +293,11 @@ const PlantCard = ({ plant, refetch, view = "grid" }) => {
         e.currentTarget.style.boxShadow = "none";
       }}
     >
-      {/* ── IMAGE ── */}
       <div
         style={{
           position: "relative",
           width: "100%",
-          height: 220,
+          height: 240,
           overflow: "hidden",
         }}
       >
@@ -312,7 +315,6 @@ const PlantCard = ({ plant, refetch, view = "grid" }) => {
           }}
         />
 
-        {/* shine sweep */}
         <div
           ref={shineRef}
           style={{
@@ -322,49 +324,46 @@ const PlantCard = ({ plant, refetch, view = "grid" }) => {
             width: "60%",
             height: "100%",
             background:
-              "linear-gradient(105deg, transparent, rgba(255,255,255,0.12), transparent)",
+              "linear-gradient(105deg, transparent, rgba(255,255,255,0.2), transparent)",
             transform: "translateX(-100%)",
             pointerEvents: "none",
           }}
         />
 
-        {/* gradient overlay for readability */}
         <div
           style={{
             position: "absolute",
             bottom: 0,
             left: 0,
             right: 0,
-            height: "55%",
+            height: "40%",
             background:
-              "linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 100%)",
+              "linear-gradient(to top, rgba(0,0,0,0.4) 0%, transparent 100%)",
             pointerEvents: "none",
           }}
         />
 
-        {/* Top badges */}
         <div
           style={{
             position: "absolute",
-            top: 12,
-            left: 12,
+            top: 14,
+            left: 14,
             display: "flex",
             flexDirection: "column",
-            gap: 5,
+            gap: 6,
           }}
         >
           <span
             style={{
-              fontSize: 9,
-              fontWeight: 800,
-              letterSpacing: "0.14em",
-              textTransform: "uppercase",
-              padding: "4px 10px",
-              borderRadius: 999,
-              background: "rgba(0,0,0,0.45)",
-              backdropFilter: "blur(8px)",
+              fontSize: 10,
+              fontWeight: 700,
+              padding: "5px 12px",
+              borderRadius: 8,
+              background: "rgba(255,255,255,0.9)",
+              backdropFilter: "blur(4px)",
               color: accent.color,
-              border: `1px solid ${accent.color}55`,
+              border: `1px solid ${accent.color}44`,
+              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
             }}
           >
             {plant.category}
@@ -372,14 +371,13 @@ const PlantCard = ({ plant, refetch, view = "grid" }) => {
           {isOutOfStock && !isFlagged && (
             <span
               style={{
-                fontSize: 9,
-                fontWeight: 800,
-                letterSpacing: "0.12em",
-                textTransform: "uppercase",
-                padding: "4px 10px",
-                borderRadius: 999,
-                background: "oklch(0.55 0.22 25)",
+                fontSize: 10,
+                fontWeight: 700,
+                padding: "5px 12px",
+                borderRadius: 8,
+                background: "oklch(0.5 0.15 25)",
                 color: "white",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
               }}
             >
               Sold Out
@@ -387,7 +385,6 @@ const PlantCard = ({ plant, refetch, view = "grid" }) => {
           )}
         </div>
 
-        {/* Flagged overlay */}
         {isFlagged && (
           <div
             style={{
@@ -396,46 +393,41 @@ const PlantCard = ({ plant, refetch, view = "grid" }) => {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              background: "oklch(0.5 0.22 25 / 0.15)",
-              backdropFilter: "blur(1px)",
+              background: "oklch(0.5 0.22 25 / 0.1)",
+              backdropFilter: "blur(2px)",
             }}
           >
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 7,
-                padding: "8px 16px",
-                borderRadius: 10,
+                gap: 8,
+                padding: "10px 20px",
+                borderRadius: 12,
                 background: "oklch(0.5 0.22 25)",
                 color: "white",
-                fontSize: 10,
+                fontSize: 11,
                 fontWeight: 800,
-                letterSpacing: "0.14em",
                 textTransform: "uppercase",
-                boxShadow: "0 4px 20px oklch(0.5 0.22 25 / 0.4)",
+                boxShadow: "0 8px 24px oklch(0.5 0.22 25 / 0.4)",
               }}
             >
-              <TbAlertTriangle
-                size={14}
-                style={{ animation: "lg-pulse-icon 1.5s ease-in-out infinite" }}
-              />
+              <TbAlertTriangle size={16} />
               Restricted
             </div>
           </div>
         )}
 
-        {/* Price tag — bottom right of image */}
         <div
           style={{
             position: "absolute",
-            bottom: 12,
-            right: 12,
-            padding: "6px 12px",
+            bottom: 14,
+            right: 14,
+            padding: "6px 14px",
             borderRadius: 10,
-            background: "rgba(0,0,0,0.55)",
+            background: "rgba(255,255,255,0.95)",
             backdropFilter: "blur(10px)",
-            border: "1px solid rgba(255,255,255,0.12)",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
           }}
         >
           <span
@@ -443,8 +435,7 @@ const PlantCard = ({ plant, refetch, view = "grid" }) => {
               fontFamily: "'Georgia', serif",
               fontSize: 18,
               fontWeight: 900,
-              color: "white",
-              letterSpacing: "-0.02em",
+              color: "#1a1a1a",
             }}
           >
             ৳{plant.price.toLocaleString()}
@@ -452,60 +443,42 @@ const PlantCard = ({ plant, refetch, view = "grid" }) => {
         </div>
       </div>
 
-      {/* ── BODY ── */}
-      <div style={{ padding: "18px 18px 18px" }}>
-        {/* Name + seller */}
-        <div style={{ marginBottom: 16 }}>
+      <div style={{ padding: "20px" }}>
+        <div style={{ marginBottom: 20 }}>
           <h3
             style={{
               fontFamily: "'Georgia', serif",
-              fontSize: 22,
+              fontSize: 24,
               fontWeight: 900,
-              letterSpacing: "-0.03em",
               lineHeight: 1.1,
               color: "var(--foreground)",
               fontStyle: "italic",
-              marginBottom: 5,
+              marginBottom: 6,
             }}
           >
             {plant.name}
           </h3>
 
-          {/* Seller row */}
-          <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-            {plant.seller?.image ? (
-              <img
-                src={plant.seller.image}
-                alt={plant.seller.name}
-                style={{
-                  width: 20,
-                  height: 20,
-                  borderRadius: "50%",
-                  objectFit: "cover",
-                  border: "1px solid var(--border)",
-                }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: 20,
-                  height: 20,
-                  borderRadius: "50%",
-                  background: accent.bg,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <TbLeaf size={10} style={{ color: accent.color }} />
-              </div>
-            )}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div
+              style={{
+                width: 22,
+                height: 22,
+                borderRadius: "50%",
+                background: accent.bg,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: `1px solid ${accent.border}`,
+              }}
+            >
+              <TbLeaf size={12} style={{ color: accent.color }} />
+            </div>
             <span
               style={{
-                fontSize: 11,
-                fontWeight: 700,
+                fontSize: 12,
+                fontWeight: 600,
                 color: "var(--muted-foreground)",
-                letterSpacing: "0.02em",
               }}
             >
               {isOwner ? "Your listing" : plant.seller?.name}
@@ -514,26 +487,24 @@ const PlantCard = ({ plant, refetch, view = "grid" }) => {
               <span
                 style={{
                   marginLeft: "auto",
-                  fontSize: 10,
-                  fontWeight: 800,
+                  fontSize: 11,
+                  fontWeight: 700,
                   color: "var(--muted-foreground)",
-                  letterSpacing: "0.06em",
+                  opacity: 0.8,
                 }}
               >
-                {plant.quantity} left
+                {plant.quantity} in stock
               </span>
             )}
           </div>
         </div>
 
-        {/* CTA */}
         <ActionButton
           plant={plant}
           isAdmin={isAdmin}
           isOwner={isOwner}
           isFlagged={isFlagged}
           handleTerminate={handleTerminate}
-          accent={accent}
         />
       </div>
 
@@ -544,34 +515,30 @@ const PlantCard = ({ plant, refetch, view = "grid" }) => {
   );
 };
 
-/* ─────────────────────────────────────────────
-   ACTION BUTTON (contextual)
-───────────────────────────────────────────── */
 const ActionButton = ({
   plant,
   isAdmin,
   isOwner,
   isFlagged,
   handleTerminate,
-  accent,
   compact,
 }) => {
   const btnBase = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    gap: 7,
+    gap: 8,
     width: "100%",
     borderRadius: 12,
     border: "none",
     cursor: "pointer",
     fontSize: 11,
     fontWeight: 800,
-    letterSpacing: "0.1em",
+    letterSpacing: "0.05em",
     textTransform: "uppercase",
-    transition: "all 0.22s",
-    height: compact ? 38 : 46,
-    padding: compact ? "0 16px" : "0",
+    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+    height: compact ? 40 : 50,
+    padding: compact ? "0 20px" : "0",
     whiteSpace: "nowrap",
     textDecoration: "none",
   };
@@ -583,29 +550,28 @@ const ActionButton = ({
         disabled={isFlagged}
         style={{
           ...btnBase,
-          background: isFlagged
-            ? "var(--accent)"
-            : "oklch(0.55 0.22 25 / 0.08)",
+          background: isFlagged ? "var(--muted)" : "oklch(0.55 0.22 25 / 0.1)",
           color: isFlagged ? "var(--muted-foreground)" : "oklch(0.55 0.22 25)",
-          border: `1px solid ${isFlagged ? "var(--border)" : "oklch(0.55 0.22 25 / 0.3)"}`,
-          opacity: isFlagged ? 0.5 : 1,
-          cursor: isFlagged ? "not-allowed" : "pointer",
+          border: `1px solid ${isFlagged ? "var(--border)" : "oklch(0.55 0.22 25 / 0.2)"}`,
+          opacity: isFlagged ? 0.7 : 1,
         }}
         onMouseEnter={(e) => {
           if (!isFlagged) {
             e.currentTarget.style.background = "oklch(0.55 0.22 25)";
             e.currentTarget.style.color = "white";
+            e.currentTarget.style.transform = "scale(1.02)";
           }
         }}
         onMouseLeave={(e) => {
           if (!isFlagged) {
-            e.currentTarget.style.background = "oklch(0.55 0.22 25 / 0.08)";
+            e.currentTarget.style.background = "oklch(0.55 0.22 25 / 0.1)";
             e.currentTarget.style.color = "oklch(0.55 0.22 25)";
+            e.currentTarget.style.transform = "scale(1)";
           }
         }}
       >
-        <TbTrash size={15} />
-        {isFlagged ? "Terminated" : "Terminate"}
+        <TbTrash size={16} />
+        {isFlagged ? "Restricted" : "Restrict Specimen"}
       </button>
     );
   }
@@ -616,23 +582,23 @@ const ActionButton = ({
         to={`/dashboard/update-plant/${plant._id}`}
         style={{
           ...btnBase,
-          background: "var(--secondary)",
-          color: "var(--secondary-foreground)",
+          background: "var(--card)",
+          color: "var(--foreground)",
           border: "1px solid var(--border)",
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.background = "var(--primary)";
-          e.currentTarget.style.color = "var(--primary-foreground)";
-          e.currentTarget.style.borderColor = "var(--primary)";
+          e.currentTarget.style.background = "var(--foreground)";
+          e.currentTarget.style.color = "var(--background)";
+          e.currentTarget.style.transform = "translateY(-2px)";
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.background = "var(--secondary)";
-          e.currentTarget.style.color = "var(--secondary-foreground)";
-          e.currentTarget.style.borderColor = "var(--border)";
+          e.currentTarget.style.background = "var(--card)";
+          e.currentTarget.style.color = "var(--foreground)";
+          e.currentTarget.style.transform = "translateY(0)";
         }}
       >
-        <TbEdit size={15} />
-        Edit Listing
+        <TbEdit size={16} />
+        Edit Asset
       </Link>
     );
   }
@@ -644,22 +610,20 @@ const ActionButton = ({
         ...btnBase,
         background: "var(--primary)",
         color: "var(--primary-foreground)",
-        boxShadow: `0 4px 18px var(--primary) / 0.25`,
+        boxShadow: "0 4px 15px rgba(0,0,0,0.1)",
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.opacity = "0.9";
-        e.currentTarget.style.transform = "translateY(-1px)";
-        e.currentTarget.style.boxShadow = `0 8px 24px var(--primary) / 0.35`;
+        e.currentTarget.style.transform = "translateY(-3px)";
+        e.currentTarget.style.boxShadow = "0 10px 20px rgba(0,0,0,0.15)";
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.opacity = "1";
         e.currentTarget.style.transform = "translateY(0)";
-        e.currentTarget.style.boxShadow = `0 4px 18px var(--primary) / 0.25`;
+        e.currentTarget.style.boxShadow = "0 4px 15px rgba(0,0,0,0.1)";
       }}
     >
-      <TbEye size={15} />
-      View Specimen
-      <TbArrowUpRight size={13} style={{ marginLeft: -2 }} />
+      <TbEye size={16} />
+      Examine Specimen
+      <TbArrowUpRight size={14} style={{ opacity: 0.7 }} />
     </Link>
   );
 };
