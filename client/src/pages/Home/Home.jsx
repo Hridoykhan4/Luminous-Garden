@@ -17,7 +17,7 @@ const BotanicalProtocol = lazy(
 gsap.registerPlugin(ScrollTrigger);
 
 const Home = () => {
-  const { data: response = {}, isLoading, refetch } = usePlants({limit: 8 });
+  const { data: response = {}, isLoading, refetch } = usePlants({ limit: 8 });
   const featuredPlants = response?.data || [];
   const totalCount = response?.count || 0;
   const container = useRef(null);
