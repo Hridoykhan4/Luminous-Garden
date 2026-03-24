@@ -9,12 +9,16 @@ const useInventory = () => {
   const queryClient = useQueryClient();
 
   // 1. Fetching logic
-  const { data: plants = [], isLoading, refetch } = useQuery({
+  const {
+    data: plants = [],
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ["inventory", user?.email],
     enabled: !!user?.email,
     queryFn: async () => {
       const { data } = await axiosSecure.get(`/plants?email=${user?.email}`);
-      console.log(data);
+      // console.log(data);
       return data?.data;
     },
   });

@@ -17,10 +17,11 @@ import {
   MdSave,
   MdTrendingUp,
 } from "react-icons/md";
-import { TbListSearch, TbX } from "react-icons/tb";
+import { TbLeaf, TbListSearch, TbX } from "react-icons/tb";
 import useInventory from "@/hooks/useInventory";
 import LoadingSpinner from "@/components/Shared/LoadingSpinner/LoadingSpinner";
 import toast from "react-hot-toast";
+import { cn } from "@/lib/utils";
 
 const MyInventory = () => {
   const { plants, isLoading, deletePlant, updatePlant } = useInventory();
@@ -37,7 +38,7 @@ const MyInventory = () => {
         stagger: 0.05,
         duration: 0.5,
         ease: "expo.out",
-        clearProps: "all", // Prevents GSAP from leaving 'transform' which causes blur
+        clearProps: "all",
       });
     }
   }, [isLoading, plants]);
@@ -46,36 +47,69 @@ const MyInventory = () => {
     toast.custom(
       (t) => (
         <div
-          className={`${t.visible ? "animate-enter" : "animate-leave"} max-w-md w-full bg-slate-900 border border-white/10 shadow-2xl rounded-2xl pointer-events-auto flex p-4 items-center gap-4`}
+          className={cn(
+            "max-w-md w-full bg-slate-900 border border-white/10 shadow-2xl rounded-2xl pointer-events-auto flex p-4 items-center gap-4 transition-all duration-300",
+            t.visible
+              ? "animate-in fade-in slide-in-from-bottom-5"
+              : "animate-out fade-out slide-out-to-bottom-5",
+          )}
         >
+          {/* Visual Indicator */}
+          <div className="size-10 rounded-full bg-rose-500/10 flex items-center justify-center border border-rose-500/20">
+            <TbLeaf className="text-rose-500 rotate-180" size={20} />
+          </div>
+
           <div className="flex-1">
-            <p className="text-[10px] font-black text-white uppercase tracking-widest">
+            <p className="text-[10px] font-black text-white uppercase tracking-[0.2em]">
               Confirm Deletion
             </p>
-            <p className="text-[9px] text-slate-400 uppercase italic">
-              This action is irreversible.
+            <p className="text-[9px] text-slate-500 uppercase italic font-bold">
+              Specimen will be purged from registry.
             </p>
           </div>
+
           <div className="flex gap-2">
             <button
-              onClick={() => {
-                deletePlant(id);
+              onClick={async () => {
+                // 1. Dismiss the confirmation toast immediately
                 toast.dismiss(t.id);
+
+                // 2. Start the sync process
+                const syncingToast = toast.loading("Purging from registry...");
+
+                try {
+                  // 3. Wait for API confirmation
+                  await deletePlant(id);
+
+                  // 4. Success Sync
+                  toast.success("Specimen Erased Successfully", {
+                    id: syncingToast,
+                  });
+                } catch (err) {
+                  // 5. Error Handling
+                  toast.error(err.response?.data?.message || "Purge Failed", {
+                    id: syncingToast,
+                  });
+                }
               }}
-              className="bg-rose-500 hover:bg-rose-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-colors"
+              className="bg-rose-600 hover:bg-rose-500 text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95"
             >
               Erase
             </button>
+
             <button
               onClick={() => toast.dismiss(t.id)}
-              className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-colors"
+              className="bg-white/5 hover:bg-white/10 text-slate-300 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
             >
               Abort
             </button>
           </div>
         </div>
       ),
-      { position: "bottom-center" },
+      {
+        position: "bottom-center",
+        duration: Infinity, // Don't let it disappear while the user is deciding
+      },
     );
   };
 

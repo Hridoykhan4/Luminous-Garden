@@ -17,11 +17,10 @@ import LuminousButton from "@/components/Shared/LuminousButton/LuminousButton";
 import LoadingSpinner from "@/components/Shared/LoadingSpinner/LoadingSpinner";
 import useSinglePlant from "@/hooks/useSinglePlant";
 
-
 const PlantDetails = () => {
   const { id } = useParams();
   const { user } = useAuth();
-  const {role} = useUserRole();
+  const { role } = useUserRole();
   const { data: plant = {}, isLoading } = useSinglePlant(id);
 
   const [quantity, setQuantity] = useState(1);

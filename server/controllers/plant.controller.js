@@ -35,23 +35,53 @@ const addPlant = asyncHandler(async (req, res, plantsCollection) => {
   });
 });
 
+// plant.controller.js updates
 const getPlants = asyncHandler(async (req, res, plantsCollection) => {
-const { category, email, search, limit, role } = req.query;
+  const { 
+    category, 
+    email, 
+    search, 
+    minPrice, 
+    maxPrice, 
+    page = 1, 
+    limit = 10, 
+    role 
+  } = req.query;
 
   let query = {};
+
+  // 1. SaaS Status Logic
   if (role !== "admin") {
     query.status = { $ne: "flagged" };
   }
+
+  // 2. Advanced Filters
   if (email) query["seller.email"] = email;
   if (category) query.category = category;
-  if (search) {
-    query.name = { $regex: search, $options: "i" };
+  
+  // 3. Range Filtering (SaaS Standard)
+  if (minPrice || maxPrice) {
+    query.price = {};
+    if (minPrice) query.price.$gte = parseFloat(minPrice);
+    if (maxPrice) query.price.$lte = parseFloat(maxPrice);
   }
-  const lim = parseInt(limit) || 0;
+
+  // 4. Case-Insensitive Fuzzy Search
+  if (search) {
+    query.$or = [
+      { name: { $regex: search, $options: "i" } },
+      { description: { $regex: search, $options: "i" } }
+    ];
+  }
+
+  // 5. Pagination Logic
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+  const lim = parseInt(limit);
 
   const plants = await plantsCollection
     .find(query)
     .sort({ createdAt: -1 })
+    .skip(skip)
     .limit(lim)
     .toArray();
 
@@ -59,7 +89,9 @@ const { category, email, search, limit, role } = req.query;
 
   res.status(200).json({
     success: true,
-    count: totalCount,
+    totalCount,
+    totalPages: Math.ceil(totalCount / lim),
+    currentPage: parseInt(page),
     data: plants,
   });
 });
@@ -86,31 +118,40 @@ const getSinglePlant = asyncHandler(async (req, res, plantsCollection) => {
   });
 });
 
-const updatePlant = async (req, res) => {
-  try {
-    const { id } = req.params;
+const updatePlant = asyncHandler(async (req, res, plantsCollection) => {
+  const { id } = req.params;
+  const updateData = req.body;
 
-    const updatedPlant = await Plant.findByIdAndUpdate(
-      id,
-      { $set: req.body },
-      { new: true, runValidators: true },
-    );
-
-    if (!updatedPlant) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Specimen not found" });
-    }
-
-    res.status(200).json({
-      success: true,
-      message: "Inventory Synced",
-      data: updatedPlant,
-    });
-  } catch (error) {
-    res.status(400).json({ success: false, message: error.message });
+  if (!ObjectId.isValid(id)) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid Specimen ID" });
   }
-};
+
+  const { _id, ...dataToUpdate } = updateData;
+
+  const result = await plantsCollection.updateOne(
+    { _id: new ObjectId(id) },
+    {
+      $set: {
+        ...dataToUpdate,
+        updatedAt: new Date(),
+      },
+    },
+  );
+
+  if (result.matchedCount === 0) {
+    return res
+      .status(404)
+      .json({ success: false, message: "Specimen not found" });
+  }
+
+  res.status(200).json({
+    success: true,
+    message: "Inventory Synced",
+    modifiedCount: result.modifiedCount,
+  });
+});
 
 const updatePlantStatus = asyncHandler(async (req, res, plantsCollection) => {
   const id = req.params.id;
@@ -133,4 +174,47 @@ const updatePlantStatus = asyncHandler(async (req, res, plantsCollection) => {
   res.status(200).json({ success: true, modifiedCount: result.modifiedCount });
 });
 
-module.exports = { addPlant, getPlants, getSinglePlant , updatePlantStatus, updatePlant};
+// Add plantsCollection as the 3rd parameter to match your route call
+const deletePlant = asyncHandler(async (req, res, plantsCollection) => {
+  const { id } = req.params;
+
+  // 1. Validate ID Format
+  if (!ObjectId.isValid(id)) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid Specimen ID",
+    });
+  }
+
+  // 2. Build Query
+  const query = { _id: new ObjectId(id) };
+
+  // 3. Apply Security Logic using req.userRole from verifyRole middleware
+  if (req.userRole !== "admin") {
+    query["seller.email"] = req.user.email;
+  }
+
+  // 4. Execute (This was crashing because plantsCollection was undefined)
+  const result = await plantsCollection.deleteOne(query);
+
+  if (result.deletedCount === 1) {
+    return res.status(200).json({
+      success: true,
+      message: "Specimen successfully erased from vault",
+    });
+  } else {
+    return res.status(404).json({
+      success: false,
+      message: "Purge failed: Specimen not found or unauthorized",
+    });
+  }
+});
+
+module.exports = {
+  addPlant,
+  getPlants,
+  getSinglePlant,
+  updatePlantStatus,
+  updatePlant,
+  deletePlant,
+};

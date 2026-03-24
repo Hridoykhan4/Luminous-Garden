@@ -6,6 +6,7 @@ const {
   getSinglePlant,
   updatePlantStatus,
   updatePlant,
+  deletePlant,
 } = require("../controllers/plant.controller");
 const { verifyToken, verifyRole } = require("../middlewares/auth.middleware");
 const validate = require("../middlewares/validate");
@@ -30,8 +31,19 @@ module.exports = (plantsCollection, usersCollection) => {
     (req, res) => updatePlantStatus(req, res, plantsCollection),
   );
 
+  router.patch(
+    "/:id",
+    verifyToken,
+    verifyRole(usersCollection, ["seller", "admin"]),
+    (req, res) => updatePlant(req, res, plantsCollection),
+  );
 
-  router.patch("/:id", verifyToken, verifyRole(),  updatePlant);
+  router.delete(
+    "/:id",
+    verifyToken,
+    verifyRole(usersCollection, ["seller", "admin"]),
+    (req, res) => deletePlant(req, res, plantsCollection),
+  );
 
   return router;
 };

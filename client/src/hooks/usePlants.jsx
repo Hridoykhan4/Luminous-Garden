@@ -2,21 +2,34 @@ import { useQuery } from "@tanstack/react-query";
 import useAxiosPublic from "./useAxiosPublic";
 import useUserRole from "./useUserRole";
 
-const usePlants = (email = "", limit = 0) => {
+// We use an object with defaults here so it never breaks
+const usePlants = ({
+  email = "",
+  limit = 10,
+  page = 1,
+  search = "",
+  category = "",
+} = {}) => {
   const axiosPublic = useAxiosPublic();
-  const { role } = useUserRole(); 
+  const { role } = useUserRole();
 
   return useQuery({
-    queryKey: ["plants", email, limit, role], 
+    // The queryKey MUST include all dependencies so it refetches when you search/filter
+    queryKey: ["plants", { email, limit, page, search, category, role }],
     queryFn: async () => {
-      const params = new URLSearchParams();
-      if (email) params.append("email", email);
-      if (limit) params.append("limit", limit);
-      if (role) params.append("role", role); 
-
-      const { data } = await axiosPublic.get(`/plants?${params.toString()}`);
-      return data;
+      const { data } = await axiosPublic.get(`/plants`, {
+        params: {
+          email,
+          limit,
+          page,
+          search,
+          category,
+          role,
+        },
+      });
+      return data; // Backend returns { success, data, totalCount, totalPages }
     },
+    placeholderData: (previousData) => previousData, // Smooth transitions during pagination
     staleTime: 1000 * 60 * 5,
   });
 };

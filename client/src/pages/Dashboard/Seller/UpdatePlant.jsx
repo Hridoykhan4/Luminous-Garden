@@ -6,19 +6,14 @@ import { useRef, useEffect } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import {
-  TbLeaf,
   TbCategory2,
   TbPlus,
   TbMinus,
-  TbScanEye,
   TbArrowLeft,
   TbActivity,
+  TbLeaf,
 } from "react-icons/tb";
-import {
-  MdAttachMoney,
-  MdOutlineDescription,
-  MdHistoryEdu,
-} from "react-icons/md";
+import { MdHistoryEdu } from "react-icons/md";
 import {
   Form,
   FormControl,
@@ -41,11 +36,13 @@ import { cn } from "@/lib/utils";
 import useInventory from "@/hooks/useInventory";
 import LoadingSpinner from "@/components/Shared/LoadingSpinner/LoadingSpinner";
 import toast from "react-hot-toast";
+import useSinglePlant from "@/hooks/useSinglePlant";
 
-// Schema matching your JSON structure
+const CATEGORIES = ["Indoor", "Outdoor", "Succulent", "Flowering"];
+
 const plantSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
-  category: z.string(),
+  category: z.string().min(1, "Please select a genus"),
   description: z
     .string()
     .min(20, "Detailed botanical logs required (20+ chars)"),
@@ -57,102 +54,106 @@ const UpdatePlant = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const previewRef = useRef();
-  const { plants, isLoading, updatePlant } = useInventory();
-
-  const currentPlant = plants?.find((p) => p._id === id);
+  const { updatePlant } = useInventory();
+  const { data: currentPlant, isLoading } = useSinglePlant(id);
 
   const form = useForm({
     resolver: zodResolver(plantSchema),
     defaultValues: {
       name: "",
-      category: "Indoor",
+      category: "", // Keep empty initially
       description: "",
       price: 0,
       quantity: 1,
     },
   });
 
-  // Sync data when loaded
+  // THE SYNC ENGINE: Normalizes data and resets form strictly
   useEffect(() => {
-    if (currentPlant) {
+    if (currentPlant && !isLoading) {
+      // 1. Normalize Category (Ensures "indoor" becomes "Indoor" to match Select options)
+      const rawCat = currentPlant.category || "Indoor";
+      const normalizedCat =
+        CATEGORIES.find((c) => c.toLowerCase() === rawCat.toLowerCase()) ||
+        "Indoor";
+
+      // 2. Atomic Reset
       form.reset({
-        name: currentPlant.name,
-        category: currentPlant.category,
-        description: currentPlant.description,
-        price: currentPlant.price,
-        quantity: currentPlant.quantity,
+        name: currentPlant.name || "",
+        category: normalizedCat,
+        description: currentPlant.description || "",
+        price: currentPlant.price || 0,
+        quantity: currentPlant.quantity || 0,
       });
     }
-  }, [currentPlant, form]);
+  }, [currentPlant, isLoading, form]);
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const watched = form.watch();
 
-  // GSAP 3D Tilt Effect
+  // 3D Magnetic Effect (Using GSAP QuickTo for performance)
   useGSAP(() => {
     const el = previewRef.current;
     if (!el) return;
-    const handleMouseMove = (e) => {
+    const xTo = gsap.quickTo(el, "rotationY", {
+      duration: 0.5,
+      ease: "power3",
+    });
+    const yTo = gsap.quickTo(el, "rotationX", {
+      duration: 0.5,
+      ease: "power3",
+    });
+
+    const move = (e) => {
       const { left, top, width, height } = el.getBoundingClientRect();
-      const x = (e.clientX - left) / width - 0.5;
-      const y = (e.clientY - top) / height - 0.5;
+      xTo(((e.clientX - left) / width - 0.5) * 20);
+      yTo(-((e.clientY - top) / height - 0.5) * 20);
+    };
+    const leave = () => {
       gsap.to(el, {
-        rotationY: x * 20,
-        rotationX: -y * 20,
-        transformPerspective: 1200,
-        ease: "power2.out",
-        duration: 0.4,
+        rotationY: 0,
+        rotationX: 0,
+        duration: 1.2,
+        ease: "elastic.out(1, 0.3)",
       });
     };
-    const handleMouseLeave = () =>
-      gsap.to(el, { rotationY: 0, rotationX: 0, duration: 0.8 });
-    el.addEventListener("mousemove", handleMouseMove);
-    el.addEventListener("mouseleave", handleMouseLeave);
+
+    el.addEventListener("mousemove", move);
+    el.addEventListener("mouseleave", leave);
     return () => {
-      el.removeEventListener("mousemove", handleMouseMove);
-      el.removeEventListener("mouseleave", handleMouseLeave);
+      el.removeEventListener("mousemove", move);
+      el.removeEventListener("mouseleave", leave);
     };
-  }, [watched.category]);
+  }, []);
 
   const onSubmit = async (values) => {
-    const loadingToast = toast.loading("Recalibrating registry...");
+    const loadingToast = toast.loading("Syncing with Registry...");
     try {
-      // Formats the data exactly like your JSON structure
-      const payload = {
-        _id: id,
-        ...values,
-        image: currentPlant.image, // Keep existing image
-        seller: currentPlant.seller, // Preserve existing seller object
-        updatedAt: new Date().toISOString(),
-      };
-
-      console.log("SENDING TO API:", payload);
-
-      await updatePlant(payload);
-
-      toast.success("Specimen recalibrated successfully", { id: loadingToast });
-      navigate("/dashboard/my-inventory");
+      await updatePlant({ id, ...currentPlant, ...values });
+      toast.success("Specimen Updated", { id: loadingToast });
+      navigate("/dashboard/my-plants");
     } catch (err) {
-      toast.error("Registry update failed", { id: loadingToast });
+      console.log(err);
+      toast.error("Update Failed", { id: loadingToast });
     }
   };
 
-  if (isLoading || !currentPlant) return <LoadingSpinner />;
+  if (isLoading) return <LoadingSpinner />;
 
   return (
-    <div className="max-w-7xl mx-auto space-y-10 pb-20 px-4">
-      {/* NAVIGATION HEADER */}
+    <div className="max-w-7xl mx-auto space-y-10 pb-20 px-4 pt-10 font-sans">
       <div className="flex justify-between items-center">
         <button
           onClick={() => navigate(-1)}
-          className="group flex items-center gap-3 text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-slate-900 transition-all"
+          className="group flex items-center gap-3 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-all"
         >
-          <div className="size-8 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-slate-900 group-hover:text-white transition-all">
-            <TbArrowLeft size={16} />
+          <div className="size-10 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-slate-900 group-hover:text-white transition-all">
+            <TbArrowLeft size={18} />
           </div>
           Back to Vault
         </button>
-        <div className="flex items-center gap-2 text-[10px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-50 px-4 py-2 rounded-full border border-emerald-100">
-          <TbActivity className="animate-pulse" /> Live Editing Mode
+        <div className="flex items-center gap-2 text-[10px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-5 py-2.5 rounded-full border border-emerald-100">
+          <TbActivity className="animate-pulse" /> Live Sync Active
         </div>
       </div>
 
@@ -161,16 +162,11 @@ const UpdatePlant = () => {
           onSubmit={form.handleSubmit(onSubmit)}
           className="grid grid-cols-1 lg:grid-cols-12 gap-10"
         >
-          {/* LEFT: DATA ENTRY */}
-          <div className="lg:col-span-7 space-y-8 bg-white p-6 md:p-12 rounded-[3rem] border border-slate-100 shadow-2xl shadow-slate-200/50">
-            <div className="space-y-2">
-              <h2 className="text-3xl font-black italic uppercase tracking-tighter text-slate-900">
-                Edit Specimen
-              </h2>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                Registry ID: {id}
-              </p>
-            </div>
+          {/* Input Panel */}
+          <div className="lg:col-span-7 space-y-8 bg-white p-8 md:p-12 rounded-[3rem] border border-slate-100 shadow-2xl">
+            <h2 className="text-4xl font-black italic uppercase tracking-tighter text-slate-900">
+              Modify Specimen
+            </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <FormField
@@ -179,16 +175,15 @@ const UpdatePlant = () => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2 text-[10px] font-black uppercase text-slate-500 mb-3 tracking-widest">
-                      <MdHistoryEdu className="text-emerald-500" size={18} />{" "}
-                      Identification
+                      <MdHistoryEdu className="text-emerald-500" /> Identity
                     </FormLabel>
                     <FormControl>
                       <Input
-                        className="h-16 rounded-2xl bg-slate-50 border-none font-bold text-lg px-6 focus-visible:ring-2 focus-visible:ring-emerald-500/20 transition-all"
+                        className="h-16 rounded-2xl bg-slate-50 border-none font-bold text-lg px-6"
                         {...field}
                       />
                     </FormControl>
-                    <FormMessage className="text-[10px] font-bold uppercase" />
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -199,30 +194,25 @@ const UpdatePlant = () => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2 text-[10px] font-black uppercase text-slate-500 mb-3 tracking-widest">
-                      <TbCategory2 className="text-emerald-500" size={18} />{" "}
-                      Genus
+                      <TbCategory2 className="text-emerald-500" /> Genus
                     </FormLabel>
+                    {/* The KEY trick: forces Select to re-render when category value is set */}
                     <Select
+                      key={field.value}
                       onValueChange={field.onChange}
                       defaultValue={field.value}
                     >
                       <FormControl>
                         <SelectTrigger className="h-16 rounded-2xl bg-slate-50 border-none font-bold px-6">
-                          <SelectValue placeholder="Select Genus" />
+                          <SelectValue placeholder="Select Category" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent className="rounded-2xl border-none shadow-2xl font-bold">
-                        {["Indoor", "Outdoor", "Succulent", "Flowering"].map(
-                          (c) => (
-                            <SelectItem
-                              key={c}
-                              value={c}
-                              className="py-3 capitalize"
-                            >
-                              {c}
-                            </SelectItem>
-                          ),
-                        )}
+                      <SelectContent className="rounded-2xl font-bold">
+                        {CATEGORIES.map((c) => (
+                          <SelectItem key={c} value={c} className="py-3">
+                            {c}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </FormItem>
@@ -236,9 +226,8 @@ const UpdatePlant = () => {
                 name="price"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="flex items-center gap-2 text-[10px] font-black uppercase text-slate-500 mb-3 tracking-widest">
-                      <MdAttachMoney className="text-emerald-500" size={18} />{" "}
-                      Unit Valuation (৳)
+                    <FormLabel className="text-[10px] font-black text-slate-500 mb-3 tracking-widest uppercase">
+                      Market Value (৳)
                     </FormLabel>
                     <FormControl>
                       <Input
@@ -247,7 +236,6 @@ const UpdatePlant = () => {
                         {...field}
                       />
                     </FormControl>
-                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -257,10 +245,10 @@ const UpdatePlant = () => {
                 name="quantity"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-[10px] font-black uppercase text-slate-500 mb-3 tracking-widest">
-                      Stock Units
+                    <FormLabel className="text-[10px] font-black text-slate-500 mb-3 tracking-widest uppercase">
+                      In Stock
                     </FormLabel>
-                    <div className="flex items-center justify-between bg-slate-50 p-2 rounded-2xl h-16">
+                    <div className="flex items-center justify-between bg-slate-50 p-2 rounded-2xl h-16 border border-slate-100">
                       <Button
                         type="button"
                         variant="ghost"
@@ -269,6 +257,7 @@ const UpdatePlant = () => {
                           form.setValue(
                             "quantity",
                             Math.max(0, field.value - 1),
+                            { shouldDirty: true },
                           )
                         }
                       >
@@ -280,7 +269,9 @@ const UpdatePlant = () => {
                         variant="ghost"
                         className="size-12 rounded-xl bg-white shadow-sm hover:bg-emerald-500 hover:text-white transition-all"
                         onClick={() =>
-                          form.setValue("quantity", field.value + 1)
+                          form.setValue("quantity", field.value + 1, {
+                            shouldDirty: true,
+                          })
                         }
                       >
                         <TbPlus />
@@ -296,39 +287,35 @@ const UpdatePlant = () => {
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center gap-2 text-[10px] font-black uppercase text-slate-500 mb-3 tracking-widest">
-                    <MdOutlineDescription
-                      className="text-emerald-500"
-                      size={18}
-                    />{" "}
-                    Botanical Logs
+                  <FormLabel className="text-[10px] font-black text-slate-500 mb-3 tracking-widest uppercase">
+                    Botanical Summary
                   </FormLabel>
                   <FormControl>
                     <Textarea
                       rows={4}
-                      className="rounded-[2rem] bg-slate-50 border-none p-6 font-medium resize-none"
+                      className="rounded-4xl bg-slate-50 border-none p-6 font-medium resize-none"
                       {...field}
                     />
                   </FormControl>
-                  <FormMessage />
                 </FormItem>
               )}
             />
 
             <Button
               type="submit"
-              className="w-full h-20 rounded-[2rem] bg-slate-900 text-white font-black uppercase tracking-[0.4em] hover:bg-emerald-600 hover:scale-[1.01] transition-all shadow-xl shadow-emerald-900/10"
+              disabled={!form.formState.isDirty}
+              className="w-full h-20 rounded-4xl bg-slate-900 text-white font-black uppercase tracking-[0.4em] hover:bg-emerald-600 transition-all shadow-xl disabled:opacity-30"
             >
-              Commit Changes
+              Authorize Sync
             </Button>
           </div>
 
-          {/* RIGHT: LIVE PROJECTION */}
+          {/* Preview Panel */}
           <div className="lg:col-span-5 h-fit lg:sticky lg:top-10">
             <div
               ref={previewRef}
               className={cn(
-                "p-8 rounded-[4rem] flex flex-col justify-between shadow-2xl transition-all duration-700 relative overflow-hidden will-change-transform",
+                "p-8 rounded-[4rem] flex flex-col justify-between shadow-2xl transition-colors duration-1000 relative overflow-hidden min-h-150",
                 watched.category === "Flowering"
                   ? "bg-rose-500"
                   : watched.category === "Succulent"
@@ -338,44 +325,44 @@ const UpdatePlant = () => {
                       : "bg-emerald-600",
               )}
             >
-              <div className="absolute top-0 right-0 size-64 bg-white/20 blur-[100px] rounded-full translate-x-1/3 -translate-y-1/3" />
-
-              <div className="relative z-10 aspect-square rounded-[3rem] overflow-hidden border-8 border-white/10 shadow-2xl mb-8 group">
+              <div className="absolute top-0 right-0 size-80 bg-white/20 blur-[100px] rounded-full translate-x-1/3 -translate-y-1/3" />
+              <div className="relative z-10 aspect-square rounded-[3rem] overflow-hidden border-8 border-white/10 shadow-2xl mb-8">
                 <img
-                  src={currentPlant.image}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                  src={
+                    currentPlant?.image ||
+                    "https://images.unsplash.com/photo-1501004318641-729e8e22bd04?auto=format&fit=crop"
+                  }
+                  className="w-full h-full object-cover"
                   alt="preview"
                 />
               </div>
-
-              <div className="relative z-10 space-y-3">
-                <span className="px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md text-white text-[9px] font-black uppercase tracking-widest border border-white/20">
+              <div className="relative z-10 space-y-3 text-white">
+                <span className="px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md text-[9px] font-black uppercase tracking-widest border border-white/20">
                   {watched.category || "Unclassified"}
                 </span>
-                <h3 className="text-4xl font-black text-white tracking-tighter italic leading-none truncate uppercase">
-                  {watched.name || "Specimen Null"}
+                <h3 className="text-4xl font-black tracking-tighter italic leading-none truncate uppercase">
+                  {watched.name || "Pending..."}
                 </h3>
-                <p className="text-white/60 text-xs font-medium line-clamp-2 italic pr-10 leading-relaxed">
-                  "{watched.description || "No logs available..."}"
+                <p className="text-white/70 text-xs font-medium line-clamp-3 italic leading-relaxed">
+                  {watched.description || "Awaiting logs..."}
                 </p>
               </div>
-
-              <div className="relative z-10 flex justify-between items-end mt-12 border-t border-white/10 pt-8">
+              <div className="relative z-10 flex justify-between items-end mt-12 border-t border-white/10 pt-8 text-white">
                 <div>
-                  <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">
-                    Unit Value
+                  <p className="text-[10px] font-black text-white/40 uppercase">
+                    Valuation
                   </p>
-                  <p className="text-5xl font-black text-white tracking-tighter italic">
-                    ৳{watched.price}
+                  <p className="text-5xl font-black tracking-tighter italic">
+                    ৳{watched.price || "0"}
                     <span className="text-xl opacity-30">.00</span>
                   </p>
                 </div>
-                <div className="bg-white/10 backdrop-blur-2xl px-8 py-4 rounded-3xl border border-white/10 text-center">
+                <div className="bg-white/10 backdrop-blur-2xl px-8 py-5 rounded-[2.5rem] border border-white/10 text-center">
                   <p className="text-[9px] font-black text-white/50 uppercase mb-1">
                     Stock
                   </p>
-                  <p className="text-3xl font-black text-white leading-none">
-                    {watched.quantity}
+                  <p className="text-3xl font-black leading-none">
+                    {watched.quantity || "0"}
                   </p>
                 </div>
               </div>
