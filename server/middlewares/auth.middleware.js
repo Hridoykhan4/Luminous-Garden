@@ -11,6 +11,25 @@ const verifyToken = (req, res, next) => {
   });
 };
 
+
+const authenticateOptional = (req, res, next) => {
+  const token = req.cookies?.token;
+  if (!token) {
+    req.user = null; 
+    return next();
+  }
+
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if (err) {
+      req.user = null; 
+    } else {
+      req.user = decoded;
+    }
+    next();
+  });
+};
+
+
 const verifyRole = (usersCollection, allowedRoles) => {
   return async (req, res, next) => {
     const email = req.user?.email;
@@ -29,4 +48,4 @@ const verifyRole = (usersCollection, allowedRoles) => {
     next();
   };
 };
-module.exports = { verifyToken, verifyRole };
+module.exports = { verifyToken, verifyRole, authenticateOptional };

@@ -1,26 +1,25 @@
 const asyncHandler = require("express-async-handler");
 const { ObjectId } = require("mongodb");
 
+/* ─────────────────────────────────────────────
+   ADD PLANT
+───────────────────────────────────────────── */
 const addPlant = asyncHandler(async (req, res, plantsCollection) => {
   const plantData = req.body;
 
   if (!plantData.seller?.email) {
-    return res.status(400).json({
-      success: false,
-      message: "Seller identity is required in the request body",
-    });
+    return res
+      .status(400)
+      .json({ success: false, message: "Seller identity is required" });
   }
-
   if (plantData.seller.email !== req.user.email) {
-    return res.status(403).json({
-      success: false,
-      message: "Security Alert: Identity Mismatch detected",
-    });
+    return res
+      .status(403)
+      .json({ success: false, message: "Security Alert: Identity Mismatch" });
   }
 
   const { _id, ...cleanData } = plantData;
 
-  // 4. Database Operation
   const result = await plantsCollection.insertOne({
     ...cleanData,
     status: "active",
@@ -35,91 +34,120 @@ const addPlant = asyncHandler(async (req, res, plantsCollection) => {
   });
 });
 
-// plant.controller.js updates
+/* ─────────────────────────────────────────────
+   GET PLANTS
+───────────────────────────────────────────── */
 const getPlants = asyncHandler(async (req, res, plantsCollection) => {
   const {
-    category,
     email,
     search,
+    category,
     minPrice,
     maxPrice,
-    page = 1,
-    limit = 10,
     role,
+    page = "1",
+    limit = "10",
   } = req.query;
 
-  const pageNum = Math.max(1, parseInt(page));
-  const limitNum = Math.max(1, Math.min(100, parseInt(limit)));
-  const skip = (pageNum - 1) * limitNum;
+  const query = {};
 
-  // 1. Build Dynamic Filter Pipeline
-  let query = {};
-  if (role !== "admin") query.status = { $ne: "flagged" };
+  /* 1. Status — hide flagged from non-admins */
+  if (role !== "admin") {
+    query.status = { $ne: "flagged" };
+  }
+
+  /* 2. Seller filter */
   if (email) query["seller.email"] = email;
-  if (category) query.category = category;
 
+  /* 3. Category — skip when empty or "all" */
+  if (category && category !== "all") query.category = category;
+
+  /* 4. Price range */
   if (minPrice || maxPrice) {
     query.price = {};
     if (minPrice) query.price.$gte = parseFloat(minPrice);
     if (maxPrice) query.price.$lte = parseFloat(maxPrice);
   }
 
-  if (search) {
+  /* 5. Full-text search */
+  if (search?.trim()) {
     query.$or = [
-      { name: { $regex: search, $options: "i" } },
-      { category: { $regex: search, $options: "i" } },
+      { name: { $regex: search.trim(), $options: "i" } },
+      { description: { $regex: search.trim(), $options: "i" } },
     ];
   }
 
-  // 2. SaaS Optimization: Execute Data and Stats in Parallel
-  const [plants, totalCount, stats] = await Promise.all([
+  /* 6. Pagination */
+  const pageNum = Math.max(1, parseInt(page, 10));
+  const limitNum = Math.max(1, Math.min(parseInt(limit, 10), 100));
+  const skip = (pageNum - 1) * limitNum;
+
+  const [plants, totalCount] = await Promise.all([
     plantsCollection
       .find(query)
-      .project({ description: 0 })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limitNum)
       .toArray(),
-
     plantsCollection.countDocuments(query),
-
-    plantsCollection
-      .aggregate([
-        { $match: { status: { $ne: "flagged" } } },
-        {
-          $group: {
-            _id: null,
-            totalSellers: { $addToSet: "$seller.email" },
-            avgPrice: { $avg: "$price" },
-            totalStock: { $sum: "$quantity" },
-          },
-        },
-        {
-          $project: {
-            uniqueSellers: { $size: "$totalSellers" },
-            avgPrice: { $round: ["$avgPrice", 2] },
-            totalStock: 1,
-          },
-        },
-      ])
-      .toArray(),
   ]);
 
   res.status(200).json({
     success: true,
-    meta: {
-      totalCount,
-      totalPages: Math.ceil(totalCount / limitNum),
-      currentPage: pageNum,
-      pageSize: limitNum,
-    },
-    stats: stats[0] || { uniqueSellers: 0, avgPrice: 0, totalStock: 0 },
+    totalCount,
+    totalPages: Math.ceil(totalCount / limitNum),
+    currentPage: pageNum,
     data: plants,
   });
 });
 
+/* ─────────────────────────────────────────────
+   GET PLANT STATS  ← new dedicated endpoint
+   Returns: totalCount, uniqueSellers, totalStock
+   Used by PulseStats component on the homepage
+───────────────────────────────────────────── */
+const getPlantStats = asyncHandler(async (req, res, plantsCollection) => {
+  // Only count active/non-flagged plants for public stats
+  const baseFilter = { status: { $ne: "flagged" } };
+
+  const [statsResult, totalCount] = await Promise.all([
+    plantsCollection
+      .aggregate([
+        { $match: baseFilter },
+        {
+          $group: {
+            _id: null,
+            totalStock: { $sum: "$quantity" },
+            uniqueSellers: { $addToSet: "$seller.email" },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            totalStock: 1,
+            uniqueSellers: { $size: "$uniqueSellers" },
+          },
+        },
+      ])
+      .toArray(),
+    plantsCollection.countDocuments(baseFilter),
+  ]);
+
+  const stats = statsResult[0] || { totalStock: 0, uniqueSellers: 0 };
+
+  res.status(200).json({
+    success: true,
+    totalCount,
+    uniqueSellers: stats.uniqueSellers,
+    totalStock: stats.totalStock,
+  });
+});
+
+/* ─────────────────────────────────────────────
+   GET SINGLE PLANT
+───────────────────────────────────────────── */
 const getSinglePlant = asyncHandler(async (req, res, plantsCollection) => {
-  const id = req.params.id;
+  const { id } = req.params;
   if (!ObjectId.isValid(id)) {
     return res
       .status(400)
@@ -127,22 +155,21 @@ const getSinglePlant = asyncHandler(async (req, res, plantsCollection) => {
   }
 
   const plant = await plantsCollection.findOne({ _id: new ObjectId(id) });
-
   if (!plant) {
     return res
       .status(404)
       .json({ success: false, message: "Specimen not found" });
   }
 
-  res.status(200).json({
-    success: true,
-    data: plant,
-  });
+  res.status(200).json({ success: true, data: plant });
 });
 
+/* ─────────────────────────────────────────────
+   UPDATE PLANT
+───────────────────────────────────────────── */
 const updatePlant = asyncHandler(async (req, res, plantsCollection) => {
   const { id } = req.params;
-  const updateData = req.body;
+  const { _id, ...dataToUpdate } = req.body;
 
   if (!ObjectId.isValid(id)) {
     return res
@@ -150,16 +177,9 @@ const updatePlant = asyncHandler(async (req, res, plantsCollection) => {
       .json({ success: false, message: "Invalid Specimen ID" });
   }
 
-  const { _id, ...dataToUpdate } = updateData;
-
   const result = await plantsCollection.updateOne(
     { _id: new ObjectId(id) },
-    {
-      $set: {
-        ...dataToUpdate,
-        updatedAt: new Date(),
-      },
-    },
+    { $set: { ...dataToUpdate, updatedAt: new Date() } },
   );
 
   if (result.matchedCount === 0) {
@@ -175,9 +195,18 @@ const updatePlant = asyncHandler(async (req, res, plantsCollection) => {
   });
 });
 
+/* ─────────────────────────────────────────────
+   UPDATE PLANT STATUS
+───────────────────────────────────────────── */
 const updatePlantStatus = asyncHandler(async (req, res, plantsCollection) => {
-  const id = req.params.id;
+  const { id } = req.params;
   const { status } = req.body;
+
+  if (!ObjectId.isValid(id)) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid Specimen ID" });
+  }
 
   const result = await plantsCollection.updateOne(
     { _id: new ObjectId(id) },
@@ -196,45 +225,39 @@ const updatePlantStatus = asyncHandler(async (req, res, plantsCollection) => {
   res.status(200).json({ success: true, modifiedCount: result.modifiedCount });
 });
 
-// Add plantsCollection as the 3rd parameter to match your route call
+/* ─────────────────────────────────────────────
+   DELETE PLANT
+───────────────────────────────────────────── */
 const deletePlant = asyncHandler(async (req, res, plantsCollection) => {
   const { id } = req.params;
 
-  // 1. Validate ID Format
   if (!ObjectId.isValid(id)) {
-    return res.status(400).json({
-      success: false,
-      message: "Invalid Specimen ID",
-    });
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid Specimen ID" });
   }
 
-  // 2. Build Query
   const query = { _id: new ObjectId(id) };
+  if (req.userRole !== "admin") query["seller.email"] = req.user.email;
 
-  // 3. Apply Security Logic using req.userRole from verifyRole middleware
-  if (req.userRole !== "admin") {
-    query["seller.email"] = req.user.email;
-  }
-
-  // 4. Execute (This was crashing because plantsCollection was undefined)
   const result = await plantsCollection.deleteOne(query);
 
   if (result.deletedCount === 1) {
-    return res.status(200).json({
-      success: true,
-      message: "Specimen successfully erased from vault",
-    });
-  } else {
-    return res.status(404).json({
-      success: false,
-      message: "Purge failed: Specimen not found or unauthorized",
-    });
+    return res
+      .status(200)
+      .json({ success: true, message: "Specimen erased from vault" });
   }
+
+  res.status(404).json({
+    success: false,
+    message: "Purge failed: not found or unauthorized",
+  });
 });
 
 module.exports = {
   addPlant,
   getPlants,
+  getPlantStats,
   getSinglePlant,
   updatePlantStatus,
   updatePlant,

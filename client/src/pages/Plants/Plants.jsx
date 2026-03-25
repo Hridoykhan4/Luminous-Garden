@@ -1,9 +1,9 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable no-unused-vars */
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 import {
   TbSearch,
   TbChevronLeft,
@@ -24,13 +24,11 @@ import PlantCard from "@/components/Shared/PlantCard";
 import PlantSkeleton from "@/components/Shared/PlantSkeleton/PlantSkeleton";
 import usePlants from "@/hooks/usePlants";
 
-gsap.registerPlugin(ScrollTrigger);
-
-/* ─────────────────────────────────────────
+/* ─────────────────────────────────────
    CONSTANTS
-───────────────────────────────────────── */
+───────────────────────────────────── */
 const CATEGORIES = [
-  { value: "all", label: "All", icon: TbLeaf },
+  { value: "all", label: "All Species", icon: TbLeaf },
   { value: "Indoor", label: "Indoor", icon: TbDroplet },
   { value: "Outdoor", label: "Outdoor", icon: TbSun },
   { value: "Flowering", label: "Flowering", icon: TbSparkles },
@@ -39,29 +37,62 @@ const CATEGORIES = [
 
 const LIMIT = 8;
 
-/* ─────────────────────────────────────────
+/* Light-mode ink accents — dark enough on white, harmonized with --primary */
+const STAT_META = [
+  {
+    key: "specimens",
+    label: "Specimens",
+    icon: ShoppingBag,
+    accent: "oklch(0.38 0.10 160)",
+    bg: "oklch(0.93 0.04 160)",
+    border: "oklch(0.86 0.06 160)",
+  },
+  {
+    key: "avg",
+    label: "Avg Price",
+    icon: Coins,
+    accent: "oklch(0.38 0.09 100)",
+    bg: "oklch(0.94 0.04 100)",
+    border: "oklch(0.87 0.06 100)",
+  },
+  {
+    key: "highest",
+    label: "Peak Price",
+    icon: TrendingUp,
+    accent: "oklch(0.35 0.08 200)",
+    bg: "oklch(0.93 0.03 200)",
+    border: "oklch(0.86 0.05 200)",
+  },
+  {
+    key: "vault",
+    label: "Vault Worth",
+    icon: Gem,
+    accent: "oklch(0.38 0.09 310)",
+    bg: "oklch(0.94 0.03 310)",
+    border: "oklch(0.87 0.05 310)",
+  },
+];
+
+/* ─────────────────────────────────────
    MAIN PAGE
-───────────────────────────────────────── */
+───────────────────────────────────── */
 const Plants = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // ── Derive all filter state directly from URL (single source of truth) ──
   const urlSearch = searchParams.get("q") || "";
   const urlCategory = searchParams.get("cat") || "all";
   const urlPage = Math.max(1, parseInt(searchParams.get("page")) || 1);
   const urlMinPrice = searchParams.get("minPrice") || "";
   const urlMaxPrice = searchParams.get("maxPrice") || "";
 
-  // ── Local UI state (not URL-derived) ──
   const [localSearch, setLocalSearch] = useState(urlSearch);
   const [view, setView] = useState("grid");
   const [minPrice, setMinPrice] = useState(urlMinPrice);
   const [maxPrice, setMaxPrice] = useState(urlMaxPrice);
   const [priceOpen, setPriceOpen] = useState(false);
-
+  const committedSearch = useRef(urlSearch);
   const heroRef = useRef(null);
 
-  // ── Data fetching — always driven by URL params ──
   const {
     data: response = {},
     isLoading,
@@ -92,17 +123,23 @@ const Plants = () => {
     };
   }, [plants]);
 
-  // ── FIX: Debounced search — only resets page when the *committed* search value changes ──
-  const committedSearch = useRef(urlSearch);
+  const statValues = {
+    specimens: response.totalCount || 0,
+    avg: `৳${metrics.avg.toLocaleString()}`,
+    highest: `৳${metrics.highest.toLocaleString()}`,
+    vault: `৳${metrics.totalValue.toLocaleString()}`,
+  };
+
+  /* Debounced search */
   useEffect(() => {
     const t = setTimeout(() => {
-      if (localSearch === committedSearch.current) return; // nothing changed
+      if (localSearch === committedSearch.current) return;
       committedSearch.current = localSearch;
       setSearchParams(
         (prev) => {
           const next = new URLSearchParams(prev);
           localSearch ? next.set("q", localSearch) : next.delete("q");
-          next.set("page", "1"); // reset page only on genuine search change
+          next.set("page", "1");
           return next;
         },
         { replace: true },
@@ -111,21 +148,15 @@ const Plants = () => {
     return () => clearTimeout(t);
   }, [localSearch, setSearchParams]);
 
-  // ── Sync local search if URL changes externally (e.g. back button) ──
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLocalSearch(urlSearch);
     committedSearch.current = urlSearch;
   }, [urlSearch]);
-
-  // ── Sync price inputs when URL changes ──
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMinPrice(urlMinPrice);
     setMaxPrice(urlMaxPrice);
   }, [urlMinPrice, urlMaxPrice]);
 
-  // ── Price filter helpers ──
   const applyPriceFilter = useCallback(() => {
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
@@ -150,86 +181,28 @@ const Plants = () => {
     setPriceOpen(false);
   }, [setSearchParams]);
 
-  // ── FIX: Stable pagination handler — reads page from URL at call time ──
   const goToPage = useCallback(
-    (targetPage) => {
+    (target) => {
       setSearchParams((prev) => {
         const next = new URLSearchParams(prev);
         const current = Math.max(1, parseInt(next.get("page")) || 1);
-        const maxPages = parseInt(next.get("_tp")) || 9999; // we store totalPages below
-        const clamped = Math.max(1, Math.min(targetPage, maxPages));
-        if (clamped === current) return prev; // no-op
+        const clamped = Math.max(1, target);
+        if (clamped === current) return prev;
         next.set("page", String(clamped));
         return next;
       });
+      // window.scrollTo({ top: 0, behavior: "smooth" });
     },
     [setSearchParams],
   );
 
-  // Store totalPages in URL so goToPage can clamp safely without stale closure
-  useEffect(() => {
-    if (!isLoading && totalPages > 0) {
-      setSearchParams(
-        (prev) => {
-          const next = new URLSearchParams(prev);
-          next.set("_tp", String(totalPages));
-          return next;
-        },
-        { replace: true },
-      );
-    }
-  }, [totalPages, isLoading, setSearchParams]);
-
-  /* GSAP — hero entrance */
-  useGSAP(() => {
-    const ctx = gsap.context(() => {
-      gsap.from(".hero-word", {
-        y: 100,
-        opacity: 0,
-        duration: 1.1,
-        stagger: 0.1,
-        ease: "expo.out",
-        delay: 0.05,
-      });
-      gsap.from(".hero-sub", {
-        y: 20,
-        opacity: 0,
-        duration: 0.9,
-        ease: "expo.out",
-        delay: 0.55,
-      });
-      gsap.from(".stat-chip", {
-        y: 24,
-        opacity: 0,
-        scale: 0.92,
-        duration: 0.8,
-        stagger: 0.07,
-        ease: "expo.out",
-        delay: 0.7,
-      });
-    }, heroRef);
-    return () => ctx.revert();
-  }, []);
-
-  /* GSAP — card entrance on data change */
-  useGSAP(() => {
-    if (!isLoading && plants.length > 0) {
-      gsap.fromTo(
-        ".specimen-card",
-        { y: 48, opacity: 0, scale: 0.94 },
-        {
-          y: 0,
-          opacity: 1,
-          scale: 1,
-          duration: 0.7,
-          stagger: 0.055,
-          ease: "expo.out",
-        },
-      );
-    }
-  }, [plants, isLoading]);
-
-  const hasPriceFilter = urlMinPrice || urlMaxPrice;
+  const clearAll = useCallback(() => {
+    setLocalSearch("");
+    setMinPrice("");
+    setMaxPrice("");
+    committedSearch.current = "";
+    setSearchParams({ cat: "all", page: "1" });
+  }, [setSearchParams]);
 
   const activeFilters = [
     urlCategory !== "all" && {
@@ -246,37 +219,73 @@ const Plants = () => {
       label: `"${localSearch}"`,
       clear: () => setLocalSearch(""),
     },
-    hasPriceFilter && {
-      label: `৳${urlMinPrice || "0"} – ৳${urlMaxPrice || "∞"}`,
+    (urlMinPrice || urlMaxPrice) && {
+      label: `৳${urlMinPrice || "0"}–৳${urlMaxPrice || "∞"}`,
       clear: clearPriceFilter,
     },
   ].filter(Boolean);
 
-  const clearAll = useCallback(() => {
-    setLocalSearch("");
-    setMinPrice("");
-    setMaxPrice("");
-    committedSearch.current = "";
-    setSearchParams({ cat: "all", page: "1" });
-  }, [setSearchParams]);
+  /* GSAP hero entrance */
+  useGSAP(() => {
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline({ defaults: { ease: "expo.out" } });
+      tl.from(".vlt-eyebrow", { y: 16, opacity: 0, duration: 0.8 }, 0)
+        .from(".vlt-line-1", { yPercent: 112, opacity: 0, duration: 1.0 }, 0.08)
+        .from(".vlt-line-2", { yPercent: 112, opacity: 0, duration: 1.0 }, 0.2)
+        .from(
+          ".vlt-rule",
+          { scaleX: 0, duration: 0.9, transformOrigin: "left" },
+          0.45,
+        )
+        .from(".vlt-sub", { y: 14, opacity: 0, duration: 0.8 }, 0.5)
+        .from(
+          ".vlt-chip",
+          { y: 14, opacity: 0, scale: 0.96, stagger: 0.07, duration: 0.7 },
+          0.62,
+        );
+    }, heroRef);
+    return () => ctx.revert();
+  }, []);
+
+  /* GSAP cards */
+  useGSAP(() => {
+    if (!isLoading && plants.length > 0)
+      gsap.fromTo(
+        ".specimen-card",
+        { y: 36, opacity: 0, scale: 0.96 },
+        {
+          y: 0,
+          opacity: 1,
+          scale: 1,
+          duration: 0.65,
+          stagger: 0.05,
+          ease: "expo.out",
+        },
+      );
+  }, [plants, isLoading]);
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--background)" }}>
-      {/* ══ HERO — NEXT WORLD LEVEL ════════════════════════════════════════ */}
+    <div style={{ minHeight: "100vh", background: "var(--background)" }}>
+      {/* ══ HERO ══════════════════════════════════════════════════════ */}
       <section
         ref={heroRef}
         style={{
-          background:
-            "linear-gradient(170deg, oklch(0.10 0.03 160) 0%, oklch(0.14 0.025 160) 55%, var(--background) 100%)",
-          paddingTop: 80,
-          paddingBottom: 80,
           position: "relative",
+          paddingTop: 72,
+          paddingBottom: 80,
           overflow: "hidden",
           isolation: "isolate",
+          /* Same mesh language as Hero.jsx — seamless sibling feel */
+          background: [
+            "radial-gradient(ellipse 68% 58% at 76% 28%, oklch(0.87 0.07 160 / 0.45) 0%, transparent 62%)",
+            "radial-gradient(ellipse 48% 65% at 8%  82%, oklch(0.90 0.05 155 / 0.32) 0%, transparent 58%)",
+            "radial-gradient(ellipse 38% 38% at 50%  8%, oklch(0.84 0.08 140 / 0.18) 0%, transparent 52%)",
+          ].join(","),
         }}
       >
-        {/* Layered ambient orbs */}
+        {/* Ambient layer */}
         <div
+          aria-hidden
           style={{
             position: "absolute",
             inset: 0,
@@ -284,42 +293,49 @@ const Plants = () => {
             zIndex: 0,
           }}
         >
-          <div
-            style={{
-              position: "absolute",
-              top: "-10%",
-              left: "5%",
-              width: 700,
-              height: 700,
-              borderRadius: "50%",
-              background:
-                "radial-gradient(circle, oklch(0.55 0.2 160 / 0.10) 0%, transparent 70%)",
-              filter: "blur(60px)",
-            }}
-          />
-          <div
-            style={{
-              position: "absolute",
-              bottom: "0%",
-              right: "-5%",
-              width: 500,
-              height: 500,
-              borderRadius: "50%",
-              background:
-                "radial-gradient(circle, oklch(0.50 0.14 200 / 0.08) 0%, transparent 70%)",
-              filter: "blur(50px)",
-            }}
-          />
-          {/* Fine grid overlay */}
+          {/* Dot grid */}
           <div
             style={{
               position: "absolute",
               inset: 0,
               backgroundImage:
-                "linear-gradient(oklch(0.55 0.18 160 / 0.04) 1px, transparent 1px), linear-gradient(90deg, oklch(0.55 0.18 160 / 0.04) 1px, transparent 1px)",
-              backgroundSize: "48px 48px",
+                "radial-gradient(circle, oklch(0.45 0.12 160 / 0.10) 1px, transparent 1px)",
+              backgroundSize: "32px 32px",
               maskImage:
-                "radial-gradient(ellipse 80% 60% at 50% 50%, black 40%, transparent 100%)",
+                "radial-gradient(ellipse 80% 65% at 30% 50%, black 25%, transparent 100%)",
+            }}
+          />
+          {/* Decorative rings — same as Hero */}
+          <div
+            style={{
+              position: "absolute",
+              top: "4%",
+              right: "6%",
+              width: 340,
+              height: 340,
+              borderRadius: "50%",
+              border: "1px solid oklch(0.45 0.12 160 / 0.12)",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              top: "12%",
+              right: "12%",
+              width: 200,
+              height: 200,
+              borderRadius: "50%",
+              border: "1px solid oklch(0.45 0.12 160 / 0.07)",
+            }}
+          />
+          {/* Grain */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              opacity: 0.018,
+              backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+              backgroundSize: "128px 128px",
             }}
           />
         </div>
@@ -328,284 +344,266 @@ const Plants = () => {
           className="container-page"
           style={{ position: "relative", zIndex: 1 }}
         >
-          {/* Eyebrow pill */}
-          <div
-            className="hero-sub"
-            style={{
-              marginBottom: 28,
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-            }}
-          >
+          {/* Eyebrow — exact pill from Hero.jsx */}
+          <div className="vlt-eyebrow" style={{ marginBottom: 28 }}>
             <span
               style={{
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 8,
-                padding: "6px 18px",
+                paddingLeft: 8,
+                paddingRight: 16,
+                paddingTop: 6,
+                paddingBottom: 6,
                 borderRadius: 999,
-                border: "1px solid oklch(0.55 0.18 160 / 0.30)",
-                background: "oklch(0.55 0.18 160 / 0.08)",
-                backdropFilter: "blur(12px)",
-                color: "oklch(0.78 0.16 160)",
-                fontSize: 10,
-                fontWeight: 900,
-                letterSpacing: "0.22em",
-                textTransform: "uppercase",
+                border: "1px solid var(--border)",
+                background: "var(--card)",
+                boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
               }}
             >
               <span
                 style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: "50%",
-                  background: "oklch(0.72 0.2 160)",
-                  boxShadow: "0 0 12px oklch(0.72 0.2 160)",
-                  animation: "lg-pulse 2s ease-in-out infinite",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "4px 10px",
+                  borderRadius: 999,
+                  background: "var(--primary)",
+                  color: "var(--primary-foreground)",
+                  fontSize: 9,
+                  fontWeight: 900,
+                  letterSpacing: "0.2em",
+                  textTransform: "uppercase",
                 }}
-              />
-              Live Botanical Index · Bangladesh
+              >
+                <span
+                  style={{
+                    width: 5,
+                    height: 5,
+                    borderRadius: "50%",
+                    background: "currentColor",
+                    animation: "vlt-blink 2s ease-in-out infinite",
+                  }}
+                />
+                Live
+              </span>
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: "var(--muted-foreground)",
+                }}
+              >
+                Specimen Vault · Bangladesh
+              </span>
             </span>
           </div>
 
-          {/* Headline — editorial split */}
-          <div style={{ marginBottom: 32 }}>
-            <div style={{ overflow: "hidden" }}>
-              <h1
-                className="hero-word"
-                style={{
-                  fontFamily: "'Georgia', 'Times New Roman', serif",
-                  fontSize: "clamp(4rem, 10vw, 9rem)",
-                  fontWeight: 900,
-                  lineHeight: 0.85,
-                  letterSpacing: "-0.045em",
-                  margin: 0,
-                  background:
-                    "linear-gradient(135deg, oklch(0.97 0.015 160) 0%, oklch(0.78 0.16 160) 60%, oklch(0.52 0.2 160) 100%)",
-                  WebkitBackgroundClip: "text",
-                  backgroundClip: "text",
-                  color: "transparent",
-                }}
-              >
-                Specimen
-              </h1>
-            </div>
-            <div
-              style={{
-                overflow: "hidden",
-                display: "flex",
-                alignItems: "baseline",
-                gap: 24,
-              }}
-            >
-              <h1
-                className="hero-word"
-                style={{
-                  fontFamily: "'Georgia', 'Times New Roman', serif",
-                  fontSize: "clamp(4rem, 10vw, 9rem)",
-                  fontWeight: 100,
-                  lineHeight: 0.85,
-                  letterSpacing: "-0.03em",
-                  margin: 0,
-                  fontStyle: "italic",
-                  color: "oklch(0.94 0.02 160 / 0.15)",
-                }}
-              >
-                Vault
-              </h1>
-              {/* Accent line */}
-              <div
-                style={{
-                  flex: 1,
-                  height: 2,
-                  maxWidth: 180,
-                  background:
-                    "linear-gradient(90deg, oklch(0.72 0.2 160 / 0.6), transparent)",
-                  borderRadius: 2,
-                  marginBottom: 8,
-                }}
-              />
-            </div>
-          </div>
-
-          {/* 2-col layout: description left, marquee-style right */}
+          {/* 2-col: headline left — stat chips right */}
           <div
             style={{
               display: "grid",
               gridTemplateColumns: "1fr auto",
-              gap: 40,
+              gap: 48,
               alignItems: "end",
-              marginBottom: 48,
             }}
           >
-            <p
-              className="hero-sub"
-              style={{
-                color: "oklch(0.72 0.04 160 / 0.55)",
-                fontSize: 15,
-                lineHeight: 1.8,
-                maxWidth: 420,
-                borderLeft: "2px solid oklch(0.55 0.18 160 / 0.3)",
-                paddingLeft: 16,
-                margin: 0,
-              }}
-            >
-              Curated living specimens from elite local growers.
-              <br />
-              Every plant, a story worth collecting.
-            </p>
-
-            {/* Rotating tag cloud */}
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 6,
-                opacity: 0.55,
-                alignSelf: "center",
-              }}
-            >
-              {["INDOOR", "OUTDOOR", "FLOWERING", "SUCCULENT"].map((tag, i) => (
-                <span
-                  key={tag}
-                  className="hero-sub"
-                  style={{
-                    fontSize: 9,
-                    fontWeight: 900,
-                    letterSpacing: "0.22em",
-                    color: "oklch(0.7 0.12 160)",
-                    opacity: 1 - i * 0.2,
-                    textAlign: "right",
-                  }}
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {/* Stat chips — redesigned */}
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            {[
-              {
-                label: "Specimens",
-                value: response.totalCount || 0,
-                icon: ShoppingBag,
-                accent: "oklch(0.70 0.20 160)",
-              },
-              {
-                label: "Avg Price",
-                value: `৳${metrics.avg.toLocaleString()}`,
-                icon: Coins,
-                accent: "oklch(0.78 0.15 80)",
-              },
-              {
-                label: "Peak Price",
-                value: `৳${metrics.highest.toLocaleString()}`,
-                icon: TrendingUp,
-                accent: "oklch(0.68 0.18 270)",
-              },
-              {
-                label: "Vault Worth",
-                value: `৳${metrics.totalValue.toLocaleString()}`,
-                icon: Gem,
-                accent: "oklch(0.72 0.20 340)",
-              },
-            ].map(({ label, value, icon: Icon, accent }) => (
+            {/* Headline */}
+            <div>
               <div
-                key={label}
-                className="stat-chip"
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  padding: "12px 18px",
-                  borderRadius: 16,
-                  border: `1px solid ${accent}2e`,
-                  background: `${accent}0c`,
-                  backdropFilter: "blur(16px)",
-                  position: "relative",
                   overflow: "hidden",
+                  lineHeight: 0.88,
+                  marginBottom: 4,
                 }}
               >
-                {/* subtle shimmer line */}
-                <div
+                <h1
+                  className="vlt-line-1"
                   style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: 1,
-                    background: `linear-gradient(90deg, transparent, ${accent}44, transparent)`,
-                  }}
-                />
-                <div
-                  style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 10,
-                    background: `${accent}14`,
-                    border: `1px solid ${accent}22`,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
+                    fontFamily: "'Georgia', 'Times New Roman', serif",
+                    fontSize: "clamp(3.4rem, 8vw, 7.5rem)",
+                    fontWeight: 900,
+                    letterSpacing: "-0.045em",
+                    color: "var(--foreground)",
+                    margin: 0,
+                    display: "block",
                   }}
                 >
-                  <Icon size={14} style={{ color: accent }} />
-                </div>
-                <div>
-                  <div
-                    style={{
-                      fontSize: 9,
-                      fontWeight: 900,
-                      letterSpacing: "0.14em",
-                      textTransform: "uppercase",
-                      color: "oklch(0.65 0.03 160)",
-                      marginBottom: 2,
-                    }}
-                  >
-                    {label}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 17,
-                      fontWeight: 900,
-                      color: "oklch(0.96 0.02 160)",
-                      letterSpacing: "-0.025em",
-                    }}
-                  >
-                    {value}
-                  </div>
-                </div>
+                  Specimen
+                </h1>
               </div>
-            ))}
+              <div style={{ overflow: "hidden", lineHeight: 0.88 }}>
+                <h1
+                  className="vlt-line-2"
+                  style={{
+                    fontFamily: "'Georgia', 'Times New Roman', serif",
+                    fontSize: "clamp(3.4rem, 8vw, 7.5rem)",
+                    fontWeight: 300,
+                    fontStyle: "italic",
+                    letterSpacing: "-0.04em",
+                    margin: 0,
+                    display: "block",
+                    background:
+                      "linear-gradient(135deg, var(--primary) 0%, oklch(0.52 0.18 148) 100%)",
+                    WebkitBackgroundClip: "text",
+                    backgroundClip: "text",
+                    color: "transparent",
+                  }}
+                >
+                  Vault.
+                </h1>
+              </div>
+
+              {/* Accent rule */}
+              <div
+                className="vlt-rule"
+                style={{
+                  marginTop: 20,
+                  marginBottom: 20,
+                  height: 1,
+                  maxWidth: 180,
+                  background:
+                    "linear-gradient(90deg, var(--primary), oklch(0.55 0.14 160 / 0.15), transparent)",
+                }}
+              />
+
+              {/* Sub copy */}
+              <p
+                className="vlt-sub"
+                style={{
+                  color: "var(--muted-foreground)",
+                  fontSize: 15,
+                  lineHeight: 1.78,
+                  maxWidth: 420,
+                  margin: 0,
+                  borderLeft: "2px solid var(--border)",
+                  paddingLeft: 14,
+                }}
+              >
+                Curated living specimens from elite local growers.
+                <br />
+                Every plant, a story worth collecting.
+              </p>
+            </div>
+
+            {/* Stat chips 2×2 */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 10,
+              }}
+              className="vlt-chip-grid"
+            >
+              {STAT_META.map(
+                ({ key, label, icon: Icon, accent, bg, border }) => (
+                  <div
+                    key={key}
+                    className="vlt-chip"
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 8,
+                      padding: "14px 16px",
+                      borderRadius: 16,
+                      background: "var(--card)",
+                      border: "1px solid var(--border)",
+                      boxShadow: "0 1px 6px rgba(0,0,0,0.04)",
+                      minWidth: 118,
+                      position: "relative",
+                      overflow: "hidden",
+                      transition:
+                        "border-color 0.22s, box-shadow 0.22s, transform 0.22s",
+                      cursor: "default",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = border;
+                      e.currentTarget.style.boxShadow = `0 6px 20px rgba(0,0,0,0.08)`;
+                      e.currentTarget.style.transform = "translateY(-2px)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = "var(--border)";
+                      e.currentTarget.style.boxShadow =
+                        "0 1px 6px rgba(0,0,0,0.04)";
+                      e.currentTarget.style.transform = "translateY(0)";
+                    }}
+                  >
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 12,
+                        right: 12,
+                        height: 1.5,
+                        background: `linear-gradient(90deg, transparent, ${accent}50, transparent)`,
+                      }}
+                    />
+                    <div
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 5,
+                        padding: "4px 8px",
+                        borderRadius: 8,
+                        background: bg,
+                        border: `1px solid ${border}`,
+                        alignSelf: "flex-start",
+                      }}
+                    >
+                      <Icon size={12} style={{ color: accent }} />
+                      <span
+                        style={{
+                          fontSize: 9,
+                          fontWeight: 900,
+                          letterSpacing: "0.14em",
+                          textTransform: "uppercase",
+                          color: accent,
+                        }}
+                      >
+                        {label}
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: "'Georgia', serif",
+                        fontSize: "clamp(1.25rem, 2.5vw, 1.6rem)",
+                        fontWeight: 900,
+                        letterSpacing: "-0.03em",
+                        color: "var(--foreground)",
+                        lineHeight: 1,
+                      }}
+                    >
+                      {statValues[key]}
+                    </div>
+                  </div>
+                ),
+              )}
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ══ TOOLBAR ═══════════════════════════════════════ */}
+      {/* ══ STICKY TOOLBAR ════════════════════════════════════════════ */}
       <div
         style={{
           position: "sticky",
           top: 0,
           zIndex: 80,
+          background: "oklch(0.99 0.005 160 / 0.94)",
+          backdropFilter: "blur(18px)",
           borderBottom: "1px solid var(--border)",
-          background: "var(--background)",
-          backdropFilter: "blur(20px)",
         }}
       >
         <div
           className="container-page"
-          style={{ paddingTop: 12, paddingBottom: 12 }}
+          style={{ paddingTop: 10, paddingBottom: 10 }}
         >
           {/* Category pills */}
           <div
             style={{
               display: "flex",
-              gap: 6,
-              marginBottom: 10,
+              gap: 5,
+              marginBottom: 8,
               flexWrap: "wrap",
             }}
           >
@@ -625,83 +623,96 @@ const Plants = () => {
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
-                    gap: 6,
-                    padding: "7px 14px",
+                    gap: 5,
+                    padding: "6px 13px",
                     borderRadius: 999,
                     cursor: "pointer",
                     border: active
                       ? "1px solid var(--primary)"
                       : "1px solid var(--border)",
-                    background: active ? "var(--primary)" : "transparent",
+                    background: active ? "var(--primary)" : "var(--card)",
                     color: active
                       ? "var(--primary-foreground)"
                       : "var(--muted-foreground)",
                     fontSize: 11,
                     fontWeight: 700,
-                    letterSpacing: "0.07em",
+                    letterSpacing: "0.06em",
                     transition: "all 0.18s",
+                    boxShadow: active
+                      ? "0 2px 8px oklch(0.45 0.12 160 / 0.20)"
+                      : "0 1px 3px rgba(0,0,0,0.04)",
                   }}
                 >
-                  <Icon size={12} />
+                  <Icon size={11} />
                   {label}
                 </button>
               );
             })}
           </div>
 
-          {/* Search + controls */}
+          {/* Search + tools row */}
           <div
             style={{
               display: "flex",
-              gap: 8,
+              gap: 7,
               alignItems: "center",
               flexWrap: "wrap",
             }}
           >
             {/* Search */}
             <div
-              style={{ flex: "1 1 220px", position: "relative", minWidth: 180 }}
+              style={{ flex: "1 1 200px", position: "relative", minWidth: 160 }}
             >
               <TbSearch
-                size={16}
+                size={14}
                 style={{
                   position: "absolute",
-                  left: 14,
+                  left: 12,
                   top: "50%",
                   transform: "translateY(-50%)",
                   color: "var(--muted-foreground)",
                   pointerEvents: "none",
-                  animation: isFetching ? "lg-spin 1s linear infinite" : "none",
+                  animation: isFetching
+                    ? "vlt-spin 0.9s linear infinite"
+                    : "none",
                 }}
               />
               <input
                 value={localSearch}
                 onChange={(e) => setLocalSearch(e.target.value)}
-                placeholder="Search by name or description..."
+                placeholder="Search specimens…"
                 style={{
                   width: "100%",
-                  height: 42,
-                  paddingLeft: 40,
-                  paddingRight: localSearch ? 40 : 14,
-                  borderRadius: 12,
+                  height: 40,
+                  boxSizing: "border-box",
+                  paddingLeft: 36,
+                  paddingRight: localSearch ? 34 : 12,
+                  borderRadius: 11,
                   border: "1px solid var(--border)",
-                  background: "var(--accent)",
+                  background: "var(--card)",
                   color: "var(--foreground)",
                   fontSize: 13,
                   fontWeight: 500,
                   outline: "none",
-                  transition: "border-color 0.2s",
-                  boxSizing: "border-box",
+                  transition: "border-color 0.18s, box-shadow 0.18s",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
                 }}
-                onFocus={(e) => (e.target.style.borderColor = "var(--primary)")}
-                onBlur={(e) => (e.target.style.borderColor = "var(--border)")}
+                onFocus={(e) => {
+                  e.target.style.borderColor = "var(--primary)";
+                  e.target.style.boxShadow =
+                    "0 0 0 3px oklch(0.45 0.12 160 / 0.10)";
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = "var(--border)";
+                  e.target.style.boxShadow = "0 1px 3px rgba(0,0,0,0.04)";
+                }}
               />
               {localSearch && (
                 <button
                   onClick={() => setLocalSearch("")}
                   style={{
                     position: "absolute",
-                    right: 12,
+                    right: 10,
                     top: "50%",
                     transform: "translateY(-50%)",
                     background: "none",
@@ -712,7 +723,7 @@ const Plants = () => {
                     padding: 2,
                   }}
                 >
-                  <TbX size={14} />
+                  <TbX size={13} />
                 </button>
               )}
             </div>
@@ -722,33 +733,36 @@ const Plants = () => {
               <button
                 onClick={() => setPriceOpen((v) => !v)}
                 style={{
-                  height: 42,
-                  padding: "0 16px",
-                  borderRadius: 12,
+                  height: 40,
+                  padding: "0 14px",
+                  borderRadius: 11,
                   cursor: "pointer",
-                  border: hasPriceFilter
-                    ? "1px solid var(--primary)"
-                    : "1px solid var(--border)",
-                  background: hasPriceFilter
-                    ? "var(--secondary)"
-                    : "var(--accent)",
-                  color: hasPriceFilter
-                    ? "var(--primary)"
-                    : "var(--muted-foreground)",
+                  border:
+                    urlMinPrice || urlMaxPrice
+                      ? "1px solid var(--primary)"
+                      : "1px solid var(--border)",
+                  background:
+                    urlMinPrice || urlMaxPrice
+                      ? "var(--secondary)"
+                      : "var(--card)",
+                  color:
+                    urlMinPrice || urlMaxPrice
+                      ? "var(--primary)"
+                      : "var(--muted-foreground)",
                   fontSize: 12,
                   fontWeight: 700,
-                  letterSpacing: "0.06em",
                   display: "flex",
                   alignItems: "center",
-                  gap: 7,
+                  gap: 6,
                   whiteSpace: "nowrap",
-                  transition: "all 0.2s",
+                  transition: "all 0.18s",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
                 }}
               >
-                <TbCurrencyTaka size={15} />
-                {hasPriceFilter
+                <TbCurrencyTaka size={14} />
+                {urlMinPrice || urlMaxPrice
                   ? `৳${urlMinPrice || "0"} – ৳${urlMaxPrice || "∞"}`
-                  : "Price Range"}
+                  : "Budget"}
               </button>
 
               {priceOpen && (
@@ -757,37 +771,41 @@ const Plants = () => {
                     position: "absolute",
                     top: "calc(100% + 8px)",
                     left: 0,
-                    width: 260,
-                    padding: 20,
-                    borderRadius: 18,
-                    zIndex: 200,
+                    zIndex: 300,
+                    width: 246,
+                    padding: 16,
+                    borderRadius: 16,
                     background: "var(--card)",
                     border: "1px solid var(--border)",
-                    boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
+                    boxShadow: "0 16px 48px rgba(0,0,0,0.10)",
                   }}
                 >
+                  <div
+                    style={{ position: "fixed", inset: 0, zIndex: -1 }}
+                    onClick={() => setPriceOpen(false)}
+                  />
                   <p
                     style={{
-                      fontSize: 11,
-                      fontWeight: 800,
+                      fontSize: 10,
+                      fontWeight: 900,
                       letterSpacing: "0.14em",
                       textTransform: "uppercase",
                       color: "var(--muted-foreground)",
-                      marginBottom: 14,
+                      marginBottom: 10,
                     }}
                   >
                     Budget Range
                   </p>
-                  <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
+                  <div style={{ display: "flex", gap: 7, marginBottom: 10 }}>
                     {[
                       {
-                        label: "MIN (৳)",
+                        label: "MIN ৳",
                         val: minPrice,
                         set: setMinPrice,
                         ph: "0",
                       },
                       {
-                        label: "MAX (৳)",
+                        label: "MAX ৳",
                         val: maxPrice,
                         set: setMaxPrice,
                         ph: "∞",
@@ -796,32 +814,34 @@ const Plants = () => {
                       <div key={label} style={{ flex: 1 }}>
                         <label
                           style={{
-                            fontSize: 10,
-                            fontWeight: 700,
+                            fontSize: 9,
+                            fontWeight: 800,
                             color: "var(--muted-foreground)",
                             display: "block",
-                            marginBottom: 5,
+                            marginBottom: 4,
+                            letterSpacing: "0.10em",
                           }}
                         >
                           {label}
                         </label>
                         <input
                           type="number"
+                          min="0"
                           value={val}
                           onChange={(e) => set(e.target.value)}
                           placeholder={ph}
                           style={{
                             width: "100%",
-                            height: 38,
-                            padding: "0 12px",
-                            borderRadius: 10,
+                            height: 34,
+                            boxSizing: "border-box",
+                            padding: "0 10px",
+                            borderRadius: 9,
                             border: "1px solid var(--border)",
                             background: "var(--accent)",
                             color: "var(--foreground)",
-                            fontSize: 14,
+                            fontSize: 13,
                             fontWeight: 700,
                             outline: "none",
-                            boxSizing: "border-box",
                           }}
                           onFocus={(e) =>
                             (e.target.style.borderColor = "var(--primary)")
@@ -833,20 +853,19 @@ const Plants = () => {
                       </div>
                     ))}
                   </div>
-                  <div style={{ display: "flex", gap: 8 }}>
+                  <div style={{ display: "flex", gap: 7 }}>
                     <button
                       onClick={applyPriceFilter}
                       style={{
                         flex: 1,
-                        height: 38,
-                        borderRadius: 10,
+                        height: 34,
+                        borderRadius: 9,
                         border: "none",
                         cursor: "pointer",
                         background: "var(--primary)",
                         color: "var(--primary-foreground)",
                         fontSize: 11,
                         fontWeight: 800,
-                        letterSpacing: "0.08em",
                       }}
                     >
                       Apply
@@ -855,15 +874,14 @@ const Plants = () => {
                       onClick={clearPriceFilter}
                       style={{
                         flex: 1,
-                        height: 38,
-                        borderRadius: 10,
+                        height: 34,
+                        borderRadius: 9,
                         cursor: "pointer",
                         border: "1px solid var(--border)",
                         background: "transparent",
                         color: "var(--muted-foreground)",
                         fontSize: 11,
                         fontWeight: 800,
-                        letterSpacing: "0.08em",
                       }}
                     >
                       Clear
@@ -878,10 +896,11 @@ const Plants = () => {
               style={{
                 display: "flex",
                 gap: 2,
-                padding: 4,
-                borderRadius: 12,
+                padding: 3,
+                borderRadius: 11,
                 border: "1px solid var(--border)",
-                background: "var(--accent)",
+                background: "var(--card)",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
               }}
             >
               {[
@@ -908,7 +927,7 @@ const Plants = () => {
                     transition: "all 0.18s",
                   }}
                 >
-                  <Icon size={15} />
+                  <Icon size={14} />
                 </button>
               ))}
             </div>
@@ -917,20 +936,21 @@ const Plants = () => {
             <button
               onClick={() => refetch()}
               style={{
-                height: 42,
-                padding: "0 18px",
-                borderRadius: 12,
+                height: 40,
+                padding: "0 16px",
+                borderRadius: 11,
                 border: "none",
                 cursor: "pointer",
                 background: "var(--primary)",
                 color: "var(--primary-foreground)",
                 display: "flex",
                 alignItems: "center",
-                gap: 7,
+                gap: 6,
                 fontSize: 12,
                 fontWeight: 800,
-                letterSpacing: "0.08em",
-                transition: "opacity 0.2s, transform 0.2s",
+                letterSpacing: "0.07em",
+                boxShadow: "0 2px 10px oklch(0.45 0.12 160 / 0.22)",
+                transition: "opacity 0.18s, transform 0.18s",
               }}
               onMouseEnter={(e) =>
                 (e.currentTarget.style.transform = "translateY(-1px)")
@@ -940,36 +960,38 @@ const Plants = () => {
               }
             >
               <TbRefresh
-                size={16}
+                size={15}
                 style={{
-                  animation: isFetching ? "lg-spin 1s linear infinite" : "none",
+                  animation: isFetching
+                    ? "vlt-spin 0.9s linear infinite"
+                    : "none",
                 }}
               />
               <span className="hidden sm:inline">Sync</span>
             </button>
           </div>
 
-          {/* Active filter chips */}
+          {/* Active filters */}
           {activeFilters.length > 0 && (
             <div
               style={{
                 display: "flex",
-                gap: 6,
-                marginTop: 10,
+                gap: 5,
+                marginTop: 8,
                 flexWrap: "wrap",
                 alignItems: "center",
               }}
             >
               <span
                 style={{
-                  fontSize: 10,
-                  fontWeight: 800,
-                  letterSpacing: "0.14em",
+                  fontSize: 9,
+                  fontWeight: 900,
+                  letterSpacing: "0.15em",
                   textTransform: "uppercase",
                   color: "var(--muted-foreground)",
                 }}
               >
-                Active:
+                Filtering:
               </span>
               {activeFilters.map((f, i) => (
                 <button
@@ -978,8 +1000,8 @@ const Plants = () => {
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
-                    gap: 5,
-                    padding: "4px 10px",
+                    gap: 4,
+                    padding: "3px 9px",
                     borderRadius: 999,
                     border: "1px solid var(--primary)",
                     background: "var(--secondary)",
@@ -1012,19 +1034,19 @@ const Plants = () => {
         </div>
       </div>
 
-      {/* ══ CONTENT ═══════════════════════════════════════ */}
+      {/* ══ CONTENT ════════════════════════════════════════════════ */}
       <div
         className="container-page"
-        style={{ paddingTop: 32, paddingBottom: 80 }}
+        style={{ paddingTop: 28, paddingBottom: 88 }}
       >
-        {/* Result count */}
+        {/* Result meta */}
         {!isLoading && (
           <div
             style={{
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              marginBottom: 24,
+              marginBottom: 20,
             }}
           >
             <p
@@ -1043,8 +1065,7 @@ const Plants = () => {
                     marginLeft: 8,
                     color: "var(--primary)",
                     fontWeight: 800,
-                    fontSize: 11,
-                    letterSpacing: "0.1em",
+                    fontSize: 10,
                   }}
                 >
                   ● syncing
@@ -1055,17 +1076,17 @@ const Plants = () => {
               style={{
                 fontSize: 11,
                 fontWeight: 700,
-                letterSpacing: "0.12em",
+                letterSpacing: "0.10em",
                 textTransform: "uppercase",
                 color: "var(--muted-foreground)",
               }}
             >
-              Page {urlPage} / {totalPages}
+              {urlPage} / {totalPages}
             </p>
           </div>
         )}
 
-        {/* Grid */}
+        {/* Cards */}
         <div style={{ minHeight: 480 }}>
           {isLoading ? (
             <div
@@ -1075,7 +1096,7 @@ const Plants = () => {
                   view === "grid"
                     ? "repeat(auto-fill, minmax(260px, 1fr))"
                     : "1fr",
-                gap: view === "grid" ? 24 : 12,
+                gap: view === "grid" ? 20 : 10,
               }}
             >
               {[...Array(LIMIT)].map((_, i) => (
@@ -1090,7 +1111,7 @@ const Plants = () => {
                   view === "grid"
                     ? "repeat(auto-fill, minmax(260px, 1fr))"
                     : "1fr",
-                gap: view === "grid" ? 24 : 12,
+                gap: view === "grid" ? 20 : 10,
               }}
             >
               {plants.map((plant) => (
@@ -1104,7 +1125,7 @@ const Plants = () => {
           )}
         </div>
 
-        {/* ── PAGINATION — fixed ── */}
+        {/* Pagination */}
         {!isLoading && totalPages > 1 && (
           <div
             style={{
@@ -1112,7 +1133,7 @@ const Plants = () => {
               justifyContent: "center",
               alignItems: "center",
               gap: 6,
-              marginTop: 64,
+              marginTop: 60,
             }}
           >
             <PaginationBtn
@@ -1120,30 +1141,28 @@ const Plants = () => {
               disabled={urlPage <= 1}
               onClick={() => goToPage(urlPage - 1)}
             />
-
             <div
               style={{
                 display: "flex",
-                gap: 4,
-                padding: 5,
-                borderRadius: 14,
+                gap: 3,
+                padding: 4,
+                borderRadius: 13,
                 border: "1px solid var(--border)",
                 background: "var(--card)",
+                boxShadow: "0 1px 6px rgba(0,0,0,0.05)",
               }}
             >
-              {/* Smart window: always show first, last, current ±1, with ellipsis */}
               {buildPageWindow(urlPage, totalPages).map((item, idx) =>
                 item === "…" ? (
                   <span
-                    key={`ellipsis-${idx}`}
+                    key={`e${idx}`}
                     style={{
-                      width: 40,
-                      height: 40,
+                      width: 36,
+                      height: 36,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                       fontSize: 12,
-                      fontWeight: 800,
                       color: "var(--muted-foreground)",
                     }}
                   >
@@ -1154,9 +1173,9 @@ const Plants = () => {
                     key={item}
                     onClick={() => goToPage(item)}
                     style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 10,
+                      width: 36,
+                      height: 36,
+                      borderRadius: 9,
                       border: "none",
                       cursor: "pointer",
                       background:
@@ -1167,10 +1186,10 @@ const Plants = () => {
                           : "var(--muted-foreground)",
                       fontSize: 12,
                       fontWeight: 800,
-                      transition: "all 0.18s",
+                      transition: "all 0.15s",
                       boxShadow:
                         urlPage === item
-                          ? "0 4px 14px oklch(0.55 0.18 160 / 0.3)"
+                          ? "0 2px 8px oklch(0.45 0.12 160 / 0.22)"
                           : "none",
                     }}
                   >
@@ -1179,7 +1198,6 @@ const Plants = () => {
                 ),
               )}
             </div>
-
             <PaginationBtn
               icon={TbChevronRight}
               disabled={urlPage >= totalPages}
@@ -1189,19 +1207,16 @@ const Plants = () => {
         )}
       </div>
 
-      {/* Global keyframes */}
       <style>{`
-        @keyframes lg-spin  { to { transform: translateY(-50%) rotate(360deg); } }
-        @keyframes lg-pulse {
-          0%,100% { opacity:1; box-shadow:0 0 10px oklch(0.72 0.2 160) }
-          50%      { opacity:.6; box-shadow:0 0 20px oklch(0.72 0.2 160) }
-        }
+        @keyframes vlt-spin  { to { transform: translateY(-50%) rotate(360deg); } }
+        @keyframes vlt-blink { 0%,100%{opacity:1} 50%{opacity:.35} }
+        @media (max-width: 900px) { .vlt-chip-grid { display: none !important; } }
       `}</style>
     </div>
   );
 };
 
-/* ── Build a smart page window to avoid rendering 50+ buttons ── */
+/* ── helpers ── */
 function buildPageWindow(current, total) {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
   const set = new Set(
@@ -1218,15 +1233,14 @@ function buildPageWindow(current, total) {
   return result;
 }
 
-/* ── Sub-components ── */
 const PaginationBtn = ({ icon: Icon, disabled, onClick }) => (
   <button
     disabled={disabled}
     onClick={onClick}
     style={{
-      width: 50,
-      height: 50,
-      borderRadius: 12,
+      width: 46,
+      height: 46,
+      borderRadius: 11,
       border: "1px solid var(--border)",
       background: "var(--card)",
       cursor: disabled ? "not-allowed" : "pointer",
@@ -1235,6 +1249,7 @@ const PaginationBtn = ({ icon: Icon, disabled, onClick }) => (
       alignItems: "center",
       justifyContent: "center",
       transition: "all 0.18s",
+      boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
     }}
     onMouseEnter={(e) => {
       if (!disabled) {
@@ -1251,7 +1266,7 @@ const PaginationBtn = ({ icon: Icon, disabled, onClick }) => (
       }
     }}
   >
-    <Icon size={20} />
+    <Icon size={18} />
   </button>
 );
 
@@ -1262,37 +1277,38 @@ const EmptyState = ({ onReset }) => (
       flexDirection: "column",
       alignItems: "center",
       justifyContent: "center",
-      padding: "80px 24px",
+      padding: "72px 24px",
       textAlign: "center",
       borderRadius: 24,
       border: "1px dashed var(--border)",
       background: "var(--card)",
+      boxShadow: "0 1px 8px rgba(0,0,0,0.03)",
     }}
   >
     <div
       style={{
-        width: 72,
-        height: 72,
+        width: 64,
+        height: 64,
         borderRadius: "50%",
         background: "var(--secondary)",
         border: "1px solid var(--border)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        marginBottom: 20,
+        marginBottom: 16,
       }}
     >
-      <TbLeaf size={32} style={{ color: "var(--primary)", opacity: 0.5 }} />
+      <TbLeaf size={26} style={{ color: "var(--primary)", opacity: 0.5 }} />
     </div>
     <h2
       style={{
         fontFamily: "'Georgia', serif",
-        fontSize: 26,
+        fontSize: 22,
         fontWeight: 900,
         color: "var(--foreground)",
         letterSpacing: "-0.02em",
         fontStyle: "italic",
-        marginBottom: 10,
+        marginBottom: 8,
       }}
     >
       No specimens found
@@ -1301,8 +1317,8 @@ const EmptyState = ({ onReset }) => (
       style={{
         color: "var(--muted-foreground)",
         fontSize: 14,
-        marginBottom: 28,
-        maxWidth: 300,
+        marginBottom: 24,
+        maxWidth: 270,
         lineHeight: 1.65,
       }}
     >
@@ -1311,7 +1327,7 @@ const EmptyState = ({ onReset }) => (
     <button
       onClick={onReset}
       style={{
-        padding: "11px 26px",
+        padding: "10px 22px",
         borderRadius: 999,
         cursor: "pointer",
         border: "1px solid var(--primary)",
@@ -1319,9 +1335,9 @@ const EmptyState = ({ onReset }) => (
         color: "var(--primary)",
         fontSize: 11,
         fontWeight: 800,
-        letterSpacing: "0.1em",
+        letterSpacing: "0.10em",
         textTransform: "uppercase",
-        transition: "all 0.2s",
+        transition: "all 0.18s",
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.background = "var(--primary)";
@@ -1332,7 +1348,7 @@ const EmptyState = ({ onReset }) => (
         e.currentTarget.style.color = "var(--primary)";
       }}
     >
-      Reset All Filters
+      Reset Filters
     </button>
   </div>
 );

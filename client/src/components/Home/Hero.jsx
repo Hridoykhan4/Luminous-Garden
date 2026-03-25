@@ -131,8 +131,8 @@ const Hero = () => {
   return (
     <section
       ref={rootRef}
-      className="relative flex items-center overflow-hidden"
-      style={{ minHeight: "100svh", padding: "88px 0 56px" }}
+      className="relative flex items-center overflow-hidden section-spacing"
+      style={{ minHeight: "100svh" }}
     >
       {/* ── Ambient background ── */}
       <div
@@ -478,7 +478,7 @@ const Hero = () => {
         </div>
 
         {/* ── Scroll cue ── */}
-        <div className="h-scroll-cue flex flex-col items-center gap-2 mt-16">
+        {/* <div className="h-scroll-cue flex flex-col items-center gap-2 mt-16">
           <span className="text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground/50">
             Explore
           </span>
@@ -496,7 +496,7 @@ const Hero = () => {
               style={{ animation: "h-scroll-dot 1.9s ease-in-out infinite" }}
             />
           </div>
-        </div>
+        </div> */}
       </div>
 
       {/* ── Responsive overrides + keyframes ── */}
