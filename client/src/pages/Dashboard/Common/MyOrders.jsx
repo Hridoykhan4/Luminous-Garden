@@ -208,6 +208,7 @@ const MyOrders = () => {
   );
 };
 
+// eslint-disable-next-line no-unused-vars
 const StatCard = ({ label, value, icon: Icon, color }) => {
   const colors = {
     emerald: "bg-emerald-50 text-emerald-600 border-emerald-100",
@@ -218,7 +219,7 @@ const StatCard = ({ label, value, icon: Icon, color }) => {
   return (
     <div
       className={cn(
-        "min-w-[120px] md:min-w-0 p-4 md:p-5 rounded-2xl md:rounded-3xl border transition-all",
+        "min-w-30 md:min-w-0 p-4 md:p-5 rounded-2xl md:rounded-3xl border transition-all",
         colors[color],
       )}
     >
