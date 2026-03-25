@@ -1,241 +1,216 @@
 import { Outlet, NavLink, Link, useLocation } from "react-router";
 import { useMemo, useRef, useEffect } from "react";
 import {
-  MdOutlineAnalytics,
   MdAddBox,
   MdHome,
   MdAccountCircle,
   MdOutlineInventory2,
   MdManageAccounts,
   MdLogout,
+  MdReceiptLong,
 } from "react-icons/md";
 import { TbLeaf, TbLayoutDashboard } from "react-icons/tb";
 import { cn } from "@/lib/utils";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
+
 import LuminousLogo from "../components/Shared/LuminousLogo/LuminousLogo";
 import useUserRole from "@/hooks/useUserRole";
 import useAuth from "@/hooks/useAuth";
 
+/* ─────────────────────────────────────────
+   NAV CONFIG (DRY + SCALABLE)
+───────────────────────────────────────── */
+const NAV_CONFIG = {
+  common: [
+    { label: "Overview", to: "/dashboard", icon: TbLayoutDashboard },
+    { label: "Profile", to: "/dashboard/profile", icon: MdAccountCircle },
+  ],
+  customer: [
+    { label: "My Orders", to: "/dashboard/my-orders", icon: MdReceiptLong },
+  ],
+  seller: [
+    { label: "My Orders", to: "/dashboard/my-orders", icon: MdReceiptLong },
+    { label: "New Specimen", to: "/dashboard/add-plant", icon: MdAddBox },
+    {
+      label: "Inventory",
+      to: "/dashboard/my-plants",
+      icon: MdOutlineInventory2,
+    },
+  ],
+  admin: [
+    {
+      label: "User Registry",
+      to: "/dashboard/manage-users",
+      icon: MdManageAccounts,
+    },
+  ],
+};
+
+/* ─────────────────────────────────────────
+   MAIN LAYOUT
+───────────────────────────────────────── */
 const DashboardLayout = () => {
   const { user, logOut } = useAuth();
   const { role, isRoleLoading } = useUserRole();
   const location = useLocation();
-  const container = useRef();
-  const outletRef = useRef();
 
-  // --- 1. INTELLIGENT HEADER LOGIC ---
-  const getHeaderTitle = (path) => {
+  const containerRef = useRef(null);
+  const outletRef = useRef(null);
+
+  /* ─────────────────────────────────────────
+     HEADER TITLE (SMART)
+  ───────────────────────────────────────── */
+  const headerTitle = useMemo(() => {
+    const path = location.pathname;
+
     if (path.includes("/update-plant/")) return "Refine Specimen";
     if (path === "/dashboard") return "Intelligence Overview";
-    const segments = path.split("/");
-    const last = segments[segments.length - 1];
-    return last.replace(/-/g, " ");
-  };
 
-  // --- 2. PREMIUM ENTRANCE ANIMATIONS ---
+    return path.split("/").pop().replace(/-/g, " ");
+  }, [location.pathname]);
+
+  /* ─────────────────────────────────────────
+     NAVIGATION (ROLE BASED)
+  ───────────────────────────────────────── */
+  const navigation = useMemo(() => {
+    if (isRoleLoading) return [];
+
+    const base = NAV_CONFIG.common;
+
+    if (role === "admin") return [...base, ...NAV_CONFIG.admin];
+    if (role === "seller") return [...base, ...NAV_CONFIG.seller];
+
+    return [...base, ...NAV_CONFIG.customer];
+  }, [role, isRoleLoading]);
+
+  /* ─────────────────────────────────────────
+     ANIMATIONS (CLEAN + SAFE)
+  ───────────────────────────────────────── */
   useGSAP(
     () => {
       const tl = gsap.timeline();
-      tl.from(".sidebar-anim", {
-        x: -50,
+
+      tl.from(".sidebar-item", {
+        x: -40,
         opacity: 0,
-        stagger: 0.1,
-        duration: 1.2,
+        stagger: 0.08,
+        duration: 0.9,
         ease: "expo.out",
       });
+
       tl.from(
         ".header-anim",
         {
           y: -20,
           opacity: 0,
-          duration: 1,
-          ease: "power3.out",
+          duration: 0.7,
+          ease: "power2.out",
         },
-        "-=0.8",
+        "-=0.5",
       );
     },
-    { scope: container },
+    { scope: containerRef },
   );
 
-  // --- 3. SEAMLESS PAGE TRANSITIONS ---
+  /* Page transition */
   useEffect(() => {
+    if (!outletRef.current) return;
+
     gsap.fromTo(
       outletRef.current,
-      { opacity: 0, y: 20, filter: "blur(8px)" },
+      { opacity: 0, y: 20, filter: "blur(6px)" },
       {
         opacity: 1,
         y: 0,
         filter: "blur(0px)",
-        duration: 0.6,
-        ease: "back.out(1.2)",
+        duration: 0.5,
+        ease: "power3.out",
       },
     );
   }, [location.pathname]);
 
-  const navigation = useMemo(() => {
-    if (isRoleLoading) return [];
-    const common = [
-      { label: "Overview", to: "/dashboard", icon: TbLayoutDashboard },
-      { label: "Statistics", to: "/dashboard/stats", icon: MdOutlineAnalytics },
-      { label: "Profile", to: "/dashboard/profile", icon: MdAccountCircle },
-    ];  
-    const sellerLinks = [
-      { label: "New Specimen", to: "/dashboard/add-plant", icon: MdAddBox },
-      {
-        label: "Inventory",
-        to: "/dashboard/my-plants",
-        icon: MdOutlineInventory2,
-      },
-    ];
-    const adminLinks = [
-      {
-        label: "User Registry",
-        to: "/dashboard/manage-users",
-        icon: MdManageAccounts,
-      },
-    ];
-
-    if (role === "admin") return [...common, ...adminLinks];
-    if (role === "seller") return [...common, ...sellerLinks];
-    return common;
-  }, [role, isRoleLoading]);
-
+  /* ─────────────────────────────────────────
+     UI
+  ───────────────────────────────────────── */
   return (
     <div
-      ref={container}
-      className="relative min-h-screen bg-[#F8FAFC] flex overflow-hidden font-sans selection:bg-emerald-500 selection:text-white"
+      ref={containerRef}
+      className="flex min-h-screen bg-background text-foreground overflow-hidden"
     >
-      {/* --- SIDEBAR: THE COMMAND CENTER --- */}
-      <aside className="hidden lg:flex w-80 flex-col bg-white border-r border-slate-200 p-8 relative z-50">
-        <div className="sidebar-anim mb-16">
+      {/* ───────── SIDEBAR ───────── */}
+      <aside className="hidden lg:flex w-80 flex-col bg-card border-r border-border p-8 z-50">
+        <div className="sidebar-item mb-14">
           <LuminousLogo />
         </div>
 
-        <nav className="grow space-y-3">
+        <nav className="flex-1 space-y-3">
           {isRoleLoading ? (
             <SidebarSkeleton />
           ) : (
             navigation.map((item) => (
-              <div key={item.to} className="sidebar-anim">
+              <div key={item.to} className="sidebar-item">
                 <DashboardNavLink item={item} />
               </div>
             ))
           )}
         </nav>
 
-        {/* --- USER FOOTER --- */}
-        <div className="sidebar-anim mt-auto pt-8 border-t border-slate-100">
-          <div className="group relative flex items-center gap-4 p-4 bg-slate-50 rounded-4xl border border-slate-100 transition-all hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 mb-6">
-            <div className="relative">
-              <img
-                src={user?.photoURL}
-                className="size-12 rounded-2xl object-cover ring-4 ring-white shadow-md"
-                alt="avatar"
-              />
-              <div className="absolute -bottom-1 -right-1 size-4 bg-emerald-500 border-2 border-white rounded-full" />
-            </div>
-            <div className="overflow-hidden">
-              <p className="text-sm font-black text-slate-900 truncate tracking-tight">
-                {user?.displayName}
-              </p>
-              <p className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em]">
-                {role}
-              </p>
-            </div>
-          </div>
+        {/* USER */}
+        <div className="sidebar-item mt-auto pt-6 border-t border-border">
+          <UserCard user={user} role={role} />
 
           <button
             onClick={logOut}
-            className="w-full flex items-center justify-between px-6 py-4 text-slate-400 hover:text-rose-500 transition-all text-[10px] font-black uppercase tracking-[0.3em] group bg-slate-50/50 rounded-2xl hover:bg-rose-50"
+            className="w-full flex items-center justify-between px-5 py-4 mt-5 text-xs font-black uppercase tracking-widest text-muted-foreground hover:text-destructive transition bg-accent rounded-xl"
           >
-            Terminal Exit
-            <MdLogout className="size-5 group-hover:translate-x-1 transition-transform" />
+            Logout
+            <MdLogout className="size-5" />
           </button>
         </div>
       </aside>
 
-      {/* --- MAIN STAGE --- */}
-      <main className="flex-1 flex flex-col h-screen overflow-y-auto custom-scrollbar bg-[#F8FAFC]">
-        {/* --- STELLAR HEADER --- */}
-        <header className="header-anim sticky top-0 z-40 bg-[#F8FAFC]/80 backdrop-blur-2xl px-12 py-10 flex items-center justify-between">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-emerald-600">
-              <TbLeaf size={14} className="animate-pulse" />
-              <span className="text-[9px] font-black uppercase tracking-[0.4em]">
-                Internal System
+      {/* ───────── MAIN ───────── */}
+      <main className="flex-1 flex flex-col h-screen overflow-y-auto custom-scrollbar">
+        {/* HEADER */}
+        <header className="header-anim sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border px-10 py-8 flex justify-between items-center">
+          <div>
+            <div className="flex items-center gap-2 text-primary">
+              <TbLeaf size={14} />
+              <span className="text-[10px] font-black uppercase tracking-[0.3em]">
+                System Core
               </span>
             </div>
-            <h2 className="text-4xl font-black tracking-tighter text-slate-900 capitalize italic">
-              {getHeaderTitle(location.pathname)}.
+
+            <h2 className="text-3xl font-black italic capitalize tracking-tight">
+              {headerTitle}.
             </h2>
           </div>
 
-          <div>
-            <Link
-              to="/"
-              className="hidden md:flex items-center gap-3 bg-slate-900 text-white px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-emerald-600 transition-all shadow-xl shadow-slate-900/20 active:scale-95"
-            >
-              <MdHome size={18} />
-              Return Home
-            </Link>
-          </div>
+          <Link
+            to="/"
+            className="hidden md:flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-xl text-xs font-black uppercase tracking-wider"
+          >
+            <MdHome size={16} />
+            Home
+          </Link>
         </header>
 
-        {/* --- DYNAMIC CONTENT SLOT --- */}
-        <div ref={outletRef} className="px-12 pb-20 max-w-400 w-full">
+        {/* CONTENT */}
+        <div ref={outletRef} className="px-10 pb-16 max-w-[1600px] w-full">
           <Outlet />
         </div>
       </main>
 
-      {/* --- MOBILE NAVIGATION: THE FLOATING HUB --- */}
-      <nav className="lg:hidden fixed bottom-8 left-1/2 -translate-x-1/2 w-[92%] max-w-md z-100">
-        <div className="bg-slate-900/95 backdrop-blur-3xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.3)] rounded-[2.5rem] flex items-center justify-around flex-wrap ">
-          {navigation.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === "/dashboard"}
-              className={({ isActive }) =>
-                cn(
-                  "relative flex flex-col items-center p-4 transition-all duration-500",
-                  isActive
-                    ? "text-emerald-400 scale-125"
-                    : "text-slate-500 hover:text-slate-300",
-                )
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <item.icon className="size-6" />
-                  {isActive && (
-                    <span className="absolute -bottom-1 size-1 bg-emerald-400 rounded-full shadow-[0_0_15px_#34d399]" />
-                  )}
-                </>
-              )}
-            </NavLink>
-          ))}
-          <Link to="/" className="p-4 text-slate-500">
-            <MdHome size={24} />
-          </Link>
-        </div>
-      </nav>
+      {/* ───────── MOBILE NAV ───────── */}
+      <MobileNav navigation={navigation} />
     </div>
   );
 };
 
-// --- SUB-COMPONENTS: THE POLISHED DETAILS ---
-
-const SidebarSkeleton = () => (
-  <div className="space-y-6">
-    {[1, 2, 3, 4, 5].map((i) => (
-      <div
-        key={i}
-        className="h-14 w-full bg-slate-100 animate-pulse rounded-3xl"
-      />
-    ))}
-  </div>
-);
+/* ─────────────────────────────────────────
+   SUB COMPONENTS
+───────────────────────────────────────── */
 
 const DashboardNavLink = ({ item }) => (
   <NavLink
@@ -243,23 +218,67 @@ const DashboardNavLink = ({ item }) => (
     end={item.to === "/dashboard"}
     className={({ isActive }) =>
       cn(
-        "flex items-center justify-between px-6 py-5 rounded-[1.8rem] text-[11px] font-black uppercase tracking-[0.15em] transition-all duration-500 group",
+        "flex items-center justify-between px-5 py-4 rounded-xl text-xs font-black uppercase tracking-wide transition-all group",
         isActive
-          ? "bg-slate-900 text-white shadow-2xl shadow-slate-400/40 -translate-y-1"
-          : "text-slate-400 hover:bg-slate-50 hover:text-slate-900",
+          ? "bg-primary text-primary-foreground shadow-lg"
+          : "text-muted-foreground hover:bg-accent hover:text-foreground",
       )
     }
   >
-    <div className="flex items-center gap-4">
-      <item.icon
-        className={cn(
-          "size-5 transition-transform duration-500 group-hover:rotate-12 group-hover:scale-110",
-        )}
-      />
+    <div className="flex items-center gap-3">
+      <item.icon className="size-5" />
       {item.label}
     </div>
-    <div className="size-1.5 rounded-full bg-current opacity-0 group-[.active]:opacity-100 transition-opacity" />
   </NavLink>
+);
+
+const UserCard = ({ user, role }) => (
+  <div className="flex items-center gap-3 p-4 rounded-xl bg-accent border border-border">
+    <img
+      src={user?.photoURL}
+      className="size-10 rounded-lg object-cover"
+      alt="avatar"
+    />
+    <div>
+      <p className="text-sm font-bold truncate">{user?.displayName}</p>
+      <p className="text-[10px] uppercase tracking-widest text-primary font-bold">
+        {role}
+      </p>
+    </div>
+  </div>
+);
+
+const MobileNav = ({ navigation }) => (
+  <nav className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-md z-50">
+    <div className="flex justify-around bg-card border border-border rounded-2xl py-3 shadow-xl">
+      {navigation.map((item) => (
+        <NavLink
+          key={item.to}
+          to={item.to}
+          end={item.to === "/dashboard"}
+          className={({ isActive }) =>
+            cn(
+              "flex flex-col items-center text-xs",
+              isActive ? "text-primary scale-110" : "text-muted-foreground",
+            )
+          }
+        >
+          <item.icon className="size-5" />
+        </NavLink>
+      ))}
+      <Link to="/" className="text-muted-foreground">
+        <MdHome size={20} />
+      </Link>
+    </div>
+  </nav>
+);
+
+const SidebarSkeleton = () => (
+  <div className="space-y-4">
+    {[...Array(5)].map((_, i) => (
+      <div key={i} className="h-12 bg-accent animate-pulse rounded-xl" />
+    ))}
+  </div>
 );
 
 export default DashboardLayout;

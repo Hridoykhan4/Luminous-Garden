@@ -42,6 +42,10 @@ const Statistics = Loadable(
 const Profile = Loadable(
   lazy(() => import("../pages/Dashboard/Common/Profile")),
 );
+const MyOrders = Loadable(
+  lazy(() => import("../pages/Dashboard/Common/MyOrders")),
+);
+
 
 // Dashboard: Seller
 const AddPlant = Loadable(
@@ -93,6 +97,7 @@ const Router = createBrowserRouter([
       // 🟢 Common Routes
       { index: true, element: <Statistics /> },
       { path: "profile", element: <Profile /> },
+      { path: "my-orders", element: <MyOrders /> },
 
       // 🟡 Seller Routes
       {

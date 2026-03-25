@@ -5,6 +5,7 @@ import AddPlantForm from "@/components/Form/AddPlantForm";
 import useAuth from "@/hooks/useAuth";
 import { imageUpload } from "@/api/utils";
 import useAxiosSecure from "@/hooks/useAxiosSecure";
+import usePlants from "@/hooks/usePlants";
 
 const AddPlant = () => {
   const { user } = useAuth();
@@ -12,7 +13,7 @@ const AddPlant = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [uploadImage, setUploadImage] = useState({ image: null, url: null });
-
+  const { refetch } = usePlants();
   const onSubmit = async (formData) => {
     // 1. Pre-flight checks
     if (!uploadImage.image) return toast.error("Please upload a plant image!");
@@ -47,6 +48,7 @@ const AddPlant = () => {
       if (data.insertedId) {
         toast.success("Plant added successfully!", { id: toastId });
         navigate("/dashboard/my-plants");
+        refetch();
       }
     } catch (err) {
       console.error("Submission Error:", err);

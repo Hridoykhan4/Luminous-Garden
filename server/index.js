@@ -9,6 +9,7 @@
   const authRoutes = require("./routes/auth.routes");
   const userRoutes = require("./routes/user.routes");
   const plantRoutes = require("./routes/plant.routes");
+  const orderRoutes = require('./routes/order.routes')
 
   const globalErrorHandler = require("./middlewares/error.middleware");
   const port = process.env.PORT || 5000;
@@ -46,11 +47,16 @@
       const db = client.db("luminous-garden");
       const usersCollection = db.collection("users");
       const plantsCollection = db.collection("plants");
+      const ordersCollection = db.collection("orders");
 
       // --- The Folder Connection ---
       app.use("/users", userRoutes(usersCollection));
       app.use("/auth", authRoutes);
       app.use("/plants", plantRoutes(plantsCollection, usersCollection));
+       app.use(
+         "/orders",
+         orderRoutes(ordersCollection, plantsCollection, usersCollection),
+       );
 
       console.log("Database connected and Routes initialized!");
     } finally {

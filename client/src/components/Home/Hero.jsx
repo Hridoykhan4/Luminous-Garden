@@ -55,7 +55,7 @@ const Hero = () => {
           0.9,
         )
         .from(".h-stat-pill", { y: 18, opacity: 0, duration: 0.7 }, 0.95)
-        .from(".h-scroll-cue", { opacity: 0, y: 8, duration: 0.6 }, 1.4);
+        
 
       /* ── continuous float (GPU-only transform) ── */
       gsap.to(plantRef.current, {
@@ -477,26 +477,7 @@ const Hero = () => {
           </div>
         </div>
 
-        {/* ── Scroll cue ── */}
-        {/* <div className="h-scroll-cue flex flex-col items-center gap-2 mt-16">
-          <span className="text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground/50">
-            Explore
-          </span>
-          <div
-            className="flex items-start justify-center pt-1.5"
-            style={{
-              width: 32,
-              height: 52,
-              borderRadius: 999,
-              border: "1.5px solid var(--border)",
-            }}
-          >
-            <div
-              className="w-1 h-3 rounded-full bg-primary"
-              style={{ animation: "h-scroll-dot 1.9s ease-in-out infinite" }}
-            />
-          </div>
-        </div> */}
+        
       </div>
 
       {/* ── Responsive overrides + keyframes ── */}

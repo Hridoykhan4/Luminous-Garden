@@ -63,34 +63,7 @@ const PulseStats = () => {
     () => {
       if (isLoading) return;
 
-      /* Section label entrance */
-      gsap.from(".ps-eyebrow", {
-        y: 16,
-        opacity: 0,
-        duration: 0.9,
-        ease: "expo.out",
-        scrollTrigger: {
-          trigger: containerRef.current,
-          start: "top 88%",
-          once: true,
-        },
-      });
-
-      /* Headline */
-      gsap.from(".ps-headline span", {
-        y: 60,
-        opacity: 0,
-        skewY: 4,
-        stagger: 0.08,
-        duration: 1.1,
-        ease: "expo.out",
-        scrollTrigger: {
-          trigger: containerRef.current,
-          start: "top 85%",
-          once: true,
-        },
-      });
-
+   
       /* Cards */
       gsap.from(".ps-card", {
         y: 40,
