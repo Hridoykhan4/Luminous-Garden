@@ -9,7 +9,7 @@ const axiosInstance = axios.create({
   withCredentials: true,
 });
 const useAxiosSecure = () => {
-  const { logOut } = useAuth();
+  const { logOut, setLoading } = useAuth();
   const nav = useNavigate();
   useEffect(() => {
     const axiosInterceptor = axiosInstance.interceptors.response.use(
@@ -19,8 +19,9 @@ const useAxiosSecure = () => {
           await logOut();
           toast.error(
             err?.response?.data?.message ||
-              "Session expired. Please log in again.",
+            "Session expired. Please log in again.",
           );
+          setLoading(false)
           nav("/login", { replace: true });
         }
         return Promise.reject(err);
@@ -28,7 +29,7 @@ const useAxiosSecure = () => {
     );
 
     return () => axiosInstance.interceptors.response.eject(axiosInterceptor);
-  }, [nav, logOut]);
+  }, [nav, logOut, setLoading]);
   return axiosInstance;
 };
 

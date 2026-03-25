@@ -29,6 +29,9 @@ const Plants = Loadable(lazy(() => import("../pages/Plants/Plants")));
 const PlantDetails = Loadable(
   lazy(() => import("../pages/PlantDetails/PlantDetails")),
 );
+const OrderTracking = Loadable(
+  lazy(() => import("../pages/OrderTracking/OrderTracking")),
+);
 const About = Loadable(lazy(() => import("../pages/About/About")));
 
 // Auth Pages
@@ -78,6 +81,7 @@ const Router = createBrowserRouter([
       { path: "plants", element: <Plants /> },
       { path: "plants/:id", element: <PlantDetails /> },
       { path: "about", element: <About /> },
+      { path: "orders/track/:orderId", element: <OrderTracking /> }
     ],
   },
 
