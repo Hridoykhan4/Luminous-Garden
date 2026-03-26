@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, Link } from "react-router";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
@@ -33,7 +33,9 @@ async function geocode(address) {
         });
         const data = await res.json();
         if (data[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-    } catch { }
+    } catch { 
+        // Hi
+    }
     return null;
 }
 
@@ -61,16 +63,16 @@ const OrderTracking = () => {
     /* ── Build Leaflet map ── */
     useEffect(() => {
         if (!tracking || !mapRef.current) return;
-        if (mapInstanceRef.current) return; // already initialized
+        if (mapInstanceRef.current) return; 
 
         let map;
 
         const initMap = async () => {
             try {
-                /* Dynamic import — Leaflet is in your package.json? If not: npm i leaflet */
+                
                 const L = (await import("leaflet")).default;
 
-                /* Fix default marker icon (Vite asset path issue) */
+               
                 delete L.Icon.Default.prototype._getIconUrl;
                 L.Icon.Default.mergeOptions({
                     iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
@@ -78,7 +80,6 @@ const OrderTracking = () => {
                     shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
                 });
 
-                /* Default: center of Dhaka */
                 const defaultCenter = [23.8103, 90.4125];
                 map = L.map(mapRef.current, { zoomControl: true, scrollWheelZoom: false }).setView(defaultCenter, 11);
 
