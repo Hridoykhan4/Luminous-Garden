@@ -8,59 +8,41 @@ gsap.registerPlugin(ScrollTrigger);
 const SectionTitle = ({ heading, subheading }) => {
   const container = useRef(null);
 
-  useGSAP(
-    () => {
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: container.current,
-          start: "top 90%",
-          toggleActions: "play none none none",
-        },
-      });
+  useGSAP(() => {
+    /* Guarantee visible first — never leave content invisible */
+    gsap.set([".st-heading", ".st-accent", ".st-sub"], { clearProps: "all" });
 
-      tl.from(".main-title", {
-        y: 30,
-        opacity: 0,
-        duration: 0.8,
-        ease: "power3.out",
-      })
-
-        .from(
-          ".title-accent",
-          {
-            scaleX: 0,
-            transformOrigin: "left",
-            duration: 0.8,
-            ease: "expo.out",
-          },
-          "-=0.4",
-        )
-
-        .from(
-          ".sub-title",
-          {
-            opacity: 0,
-            x: -15,
-            duration: 0.5,
-            ease: "power2.out",
-          },
-          "-=0.4",
+    ScrollTrigger.create({
+      trigger: container.current,
+      start: "top 92%",
+      once: true,
+      onEnter: () => {
+        gsap.fromTo(".st-heading",
+          { y: 24, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.75, ease: "expo.out", clearProps: "transform,opacity" }
         );
-    },
-    { scope: container },
-  );
+        gsap.fromTo(".st-accent",
+          { scaleX: 0 },
+          { scaleX: 1, transformOrigin: "left", duration: 0.8, ease: "expo.out", delay: 0.15, clearProps: "transform" }
+        );
+        gsap.fromTo(".st-sub",
+          { opacity: 0, x: -12 },
+          { opacity: 1, x: 0, duration: 0.6, ease: "expo.out", delay: 0.2, clearProps: "transform,opacity" }
+        );
+      },
+    });
+  }, { scope: container });
 
   return (
-    <div ref={container} className="mb-10 md:mb-16 group">
-      <div className="flex items-center gap-5 overflow-visible mb-3">
-        <h2 className="main-title text-5xl md:text-7xl font-black tracking-tighter title-gradient leading-tight">
+    <div ref={container} className="mb-10 md:mb-14">
+      <div className="flex items-center gap-5 mb-3 overflow-visible">
+        <h2 className="st-heading text-5xl md:text-7xl font-black tracking-tighter title-gradient leading-tight">
           {heading}
         </h2>
-        <div className="title-accent hidden md:block h-0.75 flex-1 bg-linear-to-r from-primary to-transparent opacity-20 rounded-full" />
+        <div className="st-accent hidden md:block h-px flex-1 bg-linear-to-r from-primary to-transparent opacity-20 rounded-full" />
       </div>
-
-      <div className="sub-title flex items-start md:items-center gap-4">
-        <div className="mt-1 md:mt-0 h-1.5 w-6 rounded-full bg-primary" />
+      <div className="st-sub flex items-start md:items-center gap-3">
+        <div className="mt-1.5 md:mt-0 h-1.5 w-5 rounded-full bg-primary shrink-0" />
         <p className="text-muted-foreground font-semibold text-sm md:text-base max-w-2xl leading-relaxed">
           {subheading}
         </p>

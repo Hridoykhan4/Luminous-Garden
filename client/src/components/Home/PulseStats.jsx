@@ -63,18 +63,6 @@ const PulseStats = () => {
     () => {
       if (isLoading) return;
 
-   
-      /* Cards */
-      gsap.from(".ps-card", {
-        y: 40,
-        opacity: 0,
-        scale: 0.97,
-        stagger: 0.1,
-        duration: 0.9,
-        ease: "expo.out",
-        scrollTrigger: { trigger: ".ps-grid", start: "top 88%", once: true },
-      });
-
       /* Count-up */
       gsap.utils.toArray(".ps-number").forEach((el) => {
         const target = parseInt(el.dataset.target, 10) || 0;
@@ -97,7 +85,6 @@ const PulseStats = () => {
   return (
     <section
       ref={containerRef}
-      className="section-spacing"
       style={{
         position: "relative",
         isolation: "isolate",
@@ -176,7 +163,7 @@ const PulseStats = () => {
         />
         {/* ── Cards grid ── */}
         <div
-          className="ps-grid"
+          className="ps-grid pb-8 md:pb-16"
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
@@ -244,7 +231,6 @@ const StatCard = ({
   isLoading,
 }) => (
   <div
-    className="ps-card"
     style={{
       padding: "32px 28px 28px",
       borderRadius: 24,

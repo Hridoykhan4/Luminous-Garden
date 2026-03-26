@@ -1,72 +1,93 @@
-import { lazy, Suspense, useRef } from "react";
+import { useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useGSAP } from "@gsap/react";
 import Hero from "@/components/Home/Hero";
 import SectionTitle from "@/components/Shared/SectionTitle/SectionTitle";
 import PlantSkeleton from "@/components/Shared/PlantSkeleton/PlantSkeleton";
-import usePlants from "@/hooks/usePlants";
 import PlantCard from "@/components/Shared/PlantCard";
 import LuminousButton from "@/components/Shared/LuminousButton/LuminousButton";
-import LoadingSpinner from "@/components/Shared/LoadingSpinner/LoadingSpinner";
-const PulseStats = lazy(() => import("../../components/Home/PulseStats"));
-const TrustPillar = lazy(() => import("../../components/Home/TrustPillar"));
-const BotanicalProtocol = lazy(
-  () => import("../../components/Home/BotanicalProtocol"),
-);
+import TrustPillar from "@/components/Home/TrustPillar";
+import BotanicalProtocol from "@/components/Home/BotanicalProtocol";
+import PulseStats from "@/components/Home/PulseStats";
+import usePlants from "@/hooks/usePlants";
 
 gsap.registerPlugin(ScrollTrigger);
 
 const Home = () => {
   const { data: response = {}, isLoading, refetch } = usePlants({ limit: 8 });
   const featuredPlants = response?.data || [];
-  const totalCount = response?.count || 0;
-  const container = useRef(null);
+  const totalCount = response?.totalCount || 0;
+  const inventoryRef = useRef(null);
+
+  /* Cards entrance when they enter viewport */
+  useGSAP(() => {
+    if (isLoading || !featuredPlants.length) return;
+    gsap.set(".home-plant-card", { clearProps: "all" });
+    ScrollTrigger.create({
+      trigger: inventoryRef.current,
+      start: "top 92%",
+      once: true,
+      onEnter: () =>
+        gsap.fromTo(".home-plant-card",
+          { y: 28, opacity: 0 },
+          { y: 0, opacity: 1, stagger: 0.055, duration: 0.6, ease: "expo.out", clearProps: "transform,opacity" }
+        ),
+    });
+  }, [isLoading, featuredPlants.length]);
 
   return (
-    <main ref={container} className="relative overflow-hidden bg-[#FAFAF9]">
-      <div className="absolute top-0 right-0 w-100 h-100 bg-emerald-100/40 blur-[120px] rounded-full -z-10" />
-      <div className="absolute top-[20%] left-0 max-w-75 h-75 bg-teal-100/30 blur-[100px] rounded-full -z-10" />
+    <main className="relative overflow-x-hidden bg-background">
 
+      {/* Ambient light blobs — fixed, behind everything, subtle */}
+      <div
+        className="fixed top-0 right-0 pointer-events-none -z-10 rounded-full"
+        style={{ width: 380, height: 380, background: "radial-gradient(circle, oklch(0.88 0.06 160 / 0.28) 0%, transparent 70%)", filter: "blur(80px)" }}
+        aria-hidden
+      />
+      <div
+        className="fixed pointer-events-none -z-10 rounded-full"
+        style={{ top: "20%", left: 0, width: 300, height: 300, background: "radial-gradient(circle, oklch(0.90 0.05 180 / 0.18) 0%, transparent 70%)", filter: "blur(80px)" }}
+        aria-hidden
+      />
+
+      {/* Hero */}
       <Hero />
+
       <div className="container-page">
-        {/* --- INVENTORY SECTION --- */}
-        <section id="explore" className="section-spacing pt-10">
+
+        {/* ── Featured Inventory ── */}
+        <section ref={inventoryRef} id="explore" className="section-spacing">
           <SectionTitle
             heading="Curated Inventory"
             subheading="Verified botanical specimens from elite local growers."
           />
 
           {isLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-              {[...Array(8)].map((_, i) => (
-                <PlantSkeleton key={i} />
-              ))}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+              {[...Array(8)].map((_, i) => <PlantSkeleton key={i} />)}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-              {featuredPlants.map((plant) => (
-                <div
-                  key={plant._id}
-                  className="plant-card-wrapper perspective-1000"
-                >
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+              {featuredPlants.map(plant => (
+                <div key={plant._id} className="home-plant-card">
                   <PlantCard refetch={refetch} plant={plant} />
                 </div>
               ))}
             </div>
           )}
 
-          {!isLoading && featuredPlants?.length > 0 && (
-            <div className="md:mt-20 mt-12 flex flex-col items-center gap-6">
-              <LuminousButton to="/plants">
-                Explore Full Marketplace
-              </LuminousButton>
+          {!isLoading && featuredPlants.length > 0 && (
+            <div className="flex flex-col items-center gap-4 mt-12 md:mt-16">
+              <LuminousButton to="/plants">Explore Full Marketplace</LuminousButton>
 
-              <div className="flex items-center gap-2 px-4 py-1.5 bg-emerald-50 rounded-full border border-emerald-100">
+              {/* Live count pill */}
+              <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-secondary border border-border">
                 <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
                 </span>
-                <p className="text-[10px] font-black text-emerald-700 uppercase tracking-[0.2em]">
+                <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">
                   {totalCount} Specimens Live Now
                 </p>
               </div>
@@ -74,22 +95,15 @@ const Home = () => {
           )}
         </section>
 
-        <Suspense fallback={<LoadingSpinner />}>
-          {/* --- TRUST PILLARS SECTION --- */}
-          <section className="section-spacing ">
-            <TrustPillar></TrustPillar>
-          </section>
+        {/* ── Trust Pillars ── */}
+        <TrustPillar />
 
-          {/* --- How It Works Section --- */}
-          <section className="section-spacing ">
-            <BotanicalProtocol></BotanicalProtocol>
-          </section>
+        {/* ── How It Works ── */}
+        <BotanicalProtocol />
 
-          {/* Pulse Stats Count */}
-          <section className="section-spacing ">
-            <PulseStats></PulseStats>
-          </section>
-        </Suspense>
+        {/* ── Stats ── */}
+        <PulseStats />
+
       </div>
     </main>
   );

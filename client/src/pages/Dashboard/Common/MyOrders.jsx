@@ -13,24 +13,23 @@ import useUserRole from "@/hooks/useUserRole";
 import useAxiosSecure from "@/hooks/useAxiosSecure";
 import { useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { cn } from "@/lib/utils";
 
 /* ─────────────────────────────────────────────
    STATUS CONFIG
 ───────────────────────────────────────────── */
 const STATUS_CFG = {
-  pending:   { label: "Pending",   color: "oklch(0.62 0.16 80)",  bg: "oklch(0.97 0.04 80)",  border: "oklch(0.85 0.08 80 / 0.5)"  },
+  pending: { label: "Pending", color: "oklch(0.62 0.16 80)", bg: "oklch(0.97 0.04 80)", border: "oklch(0.85 0.08 80 / 0.5)" },
   confirmed: { label: "Confirmed", color: "oklch(0.50 0.16 250)", bg: "oklch(0.96 0.03 250)", border: "oklch(0.82 0.08 250 / 0.5)" },
-  shipped:   { label: "Shipped",   color: "oklch(0.48 0.14 220)", bg: "oklch(0.95 0.03 220)", border: "oklch(0.80 0.08 220 / 0.5)" },
+  shipped: { label: "Shipped", color: "oklch(0.48 0.14 220)", bg: "oklch(0.95 0.03 220)", border: "oklch(0.80 0.08 220 / 0.5)" },
   delivered: { label: "Delivered", color: "oklch(0.42 0.14 160)", bg: "oklch(0.95 0.04 160)", border: "oklch(0.80 0.10 160 / 0.5)" },
-  cancelled: { label: "Cancelled", color: "oklch(0.48 0.15 25)",  bg: "oklch(0.97 0.03 25)",  border: "oklch(0.85 0.08 25 / 0.5)"  },
+  cancelled: { label: "Cancelled", color: "oklch(0.48 0.15 25)", bg: "oklch(0.97 0.03 25)", border: "oklch(0.85 0.08 25 / 0.5)" },
 };
 
 /* Next allowed statuses per role */
 const SELLER_NEXT = {
-  pending:   ["confirmed", "cancelled"],
+  pending: ["confirmed", "cancelled"],
   confirmed: ["shipped"],
-  shipped:   ["delivered"],
+  shipped: ["delivered"],
   delivered: [],
   cancelled: [],
 };
@@ -43,11 +42,11 @@ const BUYER_NEXT = {
    MAIN PAGE
 ───────────────────────────────────────────── */
 const MyOrders = () => {
-  const { role }    = useUserRole();
+  const { role } = useUserRole();
   const axiosSecure = useAxiosSecure();
   const queryClient = useQueryClient();
 
-  const [perspective, setPerspective] = useState(role === "seller" ? "seller" : "buyer");
+  const [perspective, setPerspective] = useState(role === "seller" ? "seller" : "customer");
   const [statusFilter, setStatusFilter] = useState("");
   const [updating, setUpdating] = useState(null); // orderId being updated
 
@@ -91,9 +90,9 @@ const MyOrders = () => {
   }, [axiosSecure, queryClient]);
 
   const counts = {
-    all:       orders.length,
-    pending:   orders.filter(o => o.status === "pending").length,
-    shipped:   orders.filter(o => o.status === "shipped").length,
+    all: orders.length,
+    pending: orders.filter(o => o.status === "pending").length,
+    shipped: orders.filter(o => o.status === "shipped").length,
     delivered: orders.filter(o => o.status === "delivered").length,
   };
 
@@ -123,7 +122,7 @@ const MyOrders = () => {
               display: "flex", padding: 4, borderRadius: 12,
               background: "var(--accent)", border: "1px solid var(--border)",
             }}>
-              {["seller", "buyer"].map((p) => (
+              {["seller", "customer"].map((p) => (
                 <button key={p} onClick={() => setPerspective(p)} style={{
                   padding: "6px 16px", borderRadius: 8, border: "none",
                   background: perspective === p ? "var(--card)" : "transparent",
@@ -155,9 +154,9 @@ const MyOrders = () => {
       {/* ── Stat chips ── */}
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
         {[
-          { key: "", label: "All Orders",  icon: TbPackage,      val: counts.all       },
-          { key: "pending", label: "Pending", icon: TbClockHour4, val: counts.pending   },
-          { key: "shipped", label: "In Transit", icon: TbTruckDelivery, val: counts.shipped  },
+          { key: "", label: "All Orders", icon: TbPackage, val: counts.all },
+          { key: "pending", label: "Pending", icon: TbClockHour4, val: counts.pending },
+          { key: "shipped", label: "In Transit", icon: TbTruckDelivery, val: counts.shipped },
           { key: "delivered", label: "Delivered", icon: TbCheckupList, val: counts.delivered },
         ].map(({ key, label, icon: Icon, val }) => (
           <button
@@ -239,15 +238,15 @@ const OrderRow = ({ order, perspective, role, onStatusChange, onDelete, isUpdati
   const cfg = STATUS_CFG[order.status] || STATUS_CFG.pending;
 
   const isSeller = perspective === "seller";
-  const isAdmin  = role === "admin";
+  const isAdmin = role === "admin";
   const nextStatuses = isAdmin
     ? Object.keys(STATUS_CFG).filter(s => s !== order.status && s !== "pending")
     : isSeller
-    ? (SELLER_NEXT[order.status] || [])
-    : (BUYER_NEXT[order.status]  || []);
+      ? (SELLER_NEXT[order.status] || [])
+      : (BUYER_NEXT[order.status] || []);
 
-  const canDelete   = isAdmin;
-  const hasActions  = nextStatuses.length > 0 || canDelete;
+  const canDelete = isAdmin;
+  const hasActions = nextStatuses.length > 0 || canDelete;
 
   return (
     <div
@@ -365,12 +364,12 @@ const OrderRow = ({ order, perspective, role, onStatusChange, onDelete, isUpdati
               {menuOpen && (
                 <>
                   {/* Click outside close */}
-                  <div style={{ position: "fixed", inset: 0, zIndex: 90 }} onClick={() => setMenuOpen(false)} />
+                  <div className="z-100000" style={{ position: "fixed", inset: 0 }} onClick={() => setMenuOpen(false)} />
                   <div style={{
-                    position: "absolute", top: "calc(100% + 6px)", right: 0,
+                    position: "absolute", top: "calc(100% - 50px)", right: 0,
                     minWidth: 180, borderRadius: 14, zIndex: 100,
                     background: "var(--card)", border: "1px solid var(--border)",
-                    boxShadow: "0 8px 32px rgba(0,0,0,0.12)", overflow: "hidden",
+                    // boxShadow: "0 8px 32px rgba(0,0,0,0.12)", overflow: "hidden",
                     padding: 6,
                   }}>
                     {nextStatuses.length > 0 && (

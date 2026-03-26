@@ -3,126 +3,104 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { TbCertificate, TbShieldCheck, TbTruckDelivery } from "react-icons/tb";
-import { cn } from "@/lib/utils";
+import SectionTitle from "@/components/Shared/SectionTitle/SectionTitle";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const pillars = [
+const PILLARS = [
   {
-    icon: TbTruckDelivery,
+    icon: TbTruckDelivery, num: "01",
     title: "Climate-Controlled",
-    desc: "Specially packaged to ensure your specimen arrives in perfect health.",
-    color: "from-emerald-500 to-teal-600",
-    glow: "shadow-emerald-500/20",
+    desc: "Specially packaged to ensure your specimen arrives in perfect health, every time.",
+    accent: "oklch(0.42 0.12 160)", chipBg: "oklch(0.93 0.05 160)", border: "oklch(0.84 0.08 160)",
   },
   {
-    icon: TbCertificate,
+    icon: TbCertificate, num: "02",
     title: "Certified Rare",
-    desc: "Every rare entry is DNA-verified and graded by our botanical experts.",
-    color: "from-blue-500 to-indigo-600",
-    glow: "shadow-blue-500/20",
+    desc: "Every rare entry is botanically verified and graded by our expert network.",
+    accent: "oklch(0.40 0.10 220)", chipBg: "oklch(0.93 0.04 220)", border: "oklch(0.83 0.07 220)",
   },
   {
-    icon: TbShieldCheck,
+    icon: TbShieldCheck, num: "03",
     title: "Secure Exchange",
     desc: "Protected payments and escrow services for high-value botanical trades.",
-    color: "from-purple-500 to-pink-600",
-    glow: "shadow-purple-500/20",
+    accent: "oklch(0.42 0.10 280)", chipBg: "oklch(0.94 0.03 280)", border: "oklch(0.84 0.06 280)",
   },
 ];
 
 const TrustPillar = () => {
-  const container = useRef(null);
+  const ref = useRef(null);
 
-  useGSAP(
-    () => {
-      const items = gsap.utils.toArray(".pillar-card");
-
-      gsap.fromTo(
-        items,
-        {
-          opacity: 0,
-          y: 60,
-          scale: 0.9,
-          rotateX: -15,
-        },
-        {
-          opacity: 1,
-          y: 0,
-          scale: 1,
-          rotateX: 0,
-          duration: 1.2,
-          stagger: 0.15,
-          ease: "back.out(1.2)", 
-          scrollTrigger: {
-            trigger: container.current,
-            start: "top 85%",
-            toggleActions: "play none none reverse",
-          },
-          onComplete: () => gsap.set(items, { clearProps: "all" }),  
-        },
-      );
-    },
-    { scope: container },
-  );
+  useGSAP(() => {
+    gsap.set(".tp-card", { clearProps: "all" });
+    ScrollTrigger.create({
+      trigger: ref.current,
+      start: "top 92%",
+      once: true,
+      onEnter: () =>
+        gsap.fromTo(".tp-card",
+          { y: 40, opacity: 0, scale: 0.96 },
+          { y: 0, opacity: 1, scale: 1, duration: 0.8, stagger: 0.1, ease: "expo.out", clearProps: "transform,opacity" }
+        ),
+    });
+  }, { scope: ref });
 
   return (
-    <section ref={container} className="relative overflow-hidden">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10">
-        {pillars.map((item, idx) => (
-          <div
-            key={idx}
-            className="pillar-card group relative bg-white/40 backdrop-blur-3xl border border-white/60 p-10 rounded-[3.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.04)] transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 will-change-transform"
-          >
-            <div
-              className={cn(
-                "absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity duration-700 rounded-[3.5rem] bg-linear-to-br",
-                item.color,
-              )}
-            />
-
-            {/* Icon Forge */}
-            <div className="relative mb-8 flex justify-center md:justify-start">
-              <div
-                className={cn(
-                  "absolute inset-0 blur-3xl opacity-0 group-hover:opacity-30 transition-opacity duration-500 bg-linear-to-br",
-                  item.color,
-                )}
-              />
-              <div
-                className={cn(
-                  "relative size-20 rounded-3xl flex items-center justify-center text-white shadow-2xl group-hover:rotate-12 transition-transform duration-500 bg-linear-to-br",
-                  item.color,
-                  item.glow,
-                )}
-              >
-                <item.icon size={38} strokeWidth={1.5} />
-              </div>
-            </div>
-
-            {/* Content */}
-            <div className="space-y-4 text-center md:text-left relative z-10">
-              <h4 className="text-2xl font-black text-slate-900 tracking-tight leading-none">
-                {item.title}
-              </h4>
-              <p className="text-sm text-slate-500 font-semibold leading-relaxed opacity-80 group-hover:opacity-100 transition-opacity">
-                {item.desc}
-              </p>
-            </div>
-
-            {/* Interactive Progress Line */}
-            <div className="absolute bottom-10 left-10 right-10 h-0.5 bg-slate-100 rounded-full overflow-hidden">
-              <div
-                className={cn(
-                  "h-full w-0 group-hover:w-full transition-all duration-1000 ease-out bg-linear-to-r",
-                  item.color,
-                )}
-              />
-            </div>
-          </div>
-        ))}
+    <section ref={ref} className="section-spacing">
+      <SectionTitle
+        heading="Why Luminous Garden"
+        subheading="Built for collectors who demand more than just a plant."
+      />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        {PILLARS.map((p, i) => <PillarCard key={i} pillar={p} />)}
       </div>
     </section>
+  );
+};
+
+const PillarCard = ({ pillar }) => {
+  const { icon: Icon, title, desc, accent, chipBg, border, num } = pillar;
+  const barRef = useRef(null);
+
+  return (
+    <div
+      className="tp-card vault-card relative overflow-hidden cursor-default p-8"
+      onMouseEnter={e => {
+        e.currentTarget.style.borderColor = border;
+        if (barRef.current) barRef.current.style.width = "100%";
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.borderColor = "";
+        if (barRef.current) barRef.current.style.width = "0%";
+      }}
+    >
+      {/* Watermark num */}
+      <span className="absolute top-5 right-5 font-black select-none pointer-events-none leading-none"
+        style={{ fontFamily: "'Georgia',serif", fontSize: 52, letterSpacing: "-0.04em", color: accent, opacity: 0.05 }}
+      >{num}</span>
+
+      {/* Top rule */}
+      <div className="absolute top-0 left-7 right-7 rounded-b"
+        style={{ height: 2, background: `linear-gradient(90deg, transparent, ${accent}55, transparent)` }}
+      />
+
+      {/* Icon */}
+      <div className="flex items-center justify-center mb-6"
+        style={{ width: 52, height: 52, borderRadius: 16, background: chipBg, border: `1px solid ${border}` }}
+      >
+        <Icon size={22} style={{ color: accent }} strokeWidth={1.8} />
+      </div>
+
+      <h4 className="text-lg font-black tracking-tight text-foreground mb-2">{title}</h4>
+      <p className="text-sm leading-relaxed text-muted-foreground font-medium mb-5">{desc}</p>
+
+      {/* Animated bar */}
+      <div className="h-px rounded-full bg-border overflow-hidden">
+        <div ref={barRef} className="h-full rounded-full"
+          style={{ width: "0%", background: `linear-gradient(90deg, ${accent}, ${accent}77)`, transition: "width 0.85s ease" }}
+        />
+      </div>
+    </div>
   );
 };
 
