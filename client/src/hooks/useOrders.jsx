@@ -7,7 +7,7 @@ import useUserRole from "./useUserRole";
  * useOrders
  * 
  * @param {object} options
- * @param {"buyer"|"seller"} options.perspective  — which hat the user is wearing
+ * @param {"customer"|"seller"} options.perspective  — which hat the user is wearing
  * @param {string}           options.status       — filter by order status
  * @param {number}           options.page
  * @param {number}           options.limit

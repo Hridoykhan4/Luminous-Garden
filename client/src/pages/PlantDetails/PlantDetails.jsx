@@ -143,6 +143,7 @@ const PlantDetails = () => {
 
   const [qty, setQty] = useState(1);
   const [orderOpen, setOrderOpen] = useState(false);
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const pageRef = useRef(null);
 
   const isOwner = user?.email === plant?.seller?.email;
@@ -902,7 +903,13 @@ const PlantDetails = () => {
                 <>
                   <button
                     disabled={isOutOfStock || isFlagged}
-                    onClick={() => canBuy && setOrderOpen(true)}
+                    onClick={() => {
+                      if (!user) {
+                        setShowAuthPrompt(true);
+                        return;
+                      }
+                      if (canBuy) setOrderOpen(true);
+                    }}
                     style={{
                       width: "100%",
                       height: 54,
@@ -968,29 +975,7 @@ const PlantDetails = () => {
                 </>
               )}
 
-              {/* Not logged in nudge */}
-              {!user && !isAdmin && (
-                <p
-                  style={{
-                    textAlign: "center",
-                    fontSize: 12,
-                    color: "var(--muted-foreground)",
-                    fontWeight: 600,
-                  }}
-                >
-                  <Link
-                    to="/login"
-                    style={{
-                      color: "var(--primary)",
-                      fontWeight: 800,
-                      textDecoration: "none",
-                    }}
-                  >
-                    Sign in
-                  </Link>{" "}
-                  to place an order
-                </p>
-              )}
+
             </div>
           </div>
 
@@ -1013,10 +998,10 @@ const PlantDetails = () => {
                   transition: "border-color 0.18s",
                 }}
                 onMouseEnter={(e) =>
-                  (e.currentTarget.style.borderColor = ac.border.replace(
-                    "0.2)",
-                    "0.5)",
-                  ))
+                (e.currentTarget.style.borderColor = ac.border.replace(
+                  "0.2)",
+                  "0.5)",
+                ))
                 }
                 onMouseLeave={(e) =>
                   (e.currentTarget.style.borderColor = "var(--border)")
@@ -1075,6 +1060,43 @@ const PlantDetails = () => {
           onClose={() => setOrderOpen(false)}
           user={user}
         />
+      )}
+
+      {showAuthPrompt && (
+        <div className="pd-auth-overlay">
+          <div className="pd-auth-modal">
+            <h3>🌿 Continue your order</h3>
+
+            <p>
+              Sign in to place your order, track delivery, and save your favorites.
+            </p>
+
+            <div className="pd-auth-actions">
+              <Link
+                to="/login"
+                className="pd-auth-btn primary"
+                onClick={() => setShowAuthPrompt(false)}
+              >
+                Login
+              </Link>
+
+              <Link
+                to="/signup"
+                className="pd-auth-btn"
+                onClick={() => setShowAuthPrompt(false)}
+              >
+                Create Account
+              </Link>
+            </div>
+
+            <button
+              className="pd-auth-close"
+              onClick={() => setShowAuthPrompt(false)}
+            >
+              ✕
+            </button>
+          </div>
+        </div>
       )}
 
       {/* ── Responsive layout + keyframes ── */}
@@ -1139,6 +1161,72 @@ const PlantDetails = () => {
           .pd-zoom-hint   { display: none !important; }
           .pd-zoom-result { display: none !important; }
         }
+
+        .pd-auth-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.pd-auth-modal {
+  width: 92%;
+  max-width: 380px;
+  padding: 28px;
+  border-radius: 20px;
+  background: white;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  text-align: center;
+  position: relative;
+}
+
+.pd-auth-modal h3 {
+  font-size: 20px;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+
+.pd-auth-modal p {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.pd-auth-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.pd-auth-btn {
+  flex: 1;
+  padding: 11px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+  font-weight: 700;
+  text-decoration: none;
+  text-align: center;
+}
+
+.pd-auth-btn.primary {
+  background: var(--primary);
+  color: white;
+  border: none;
+}
+
+.pd-auth-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+}
       `}</style>
     </main>
   );

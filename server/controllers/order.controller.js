@@ -101,7 +101,6 @@ const getOrders = asyncHandler(
     const { role = "customer", status, page = "1", limit = "20" } = req.query;
     const email = req.user.email;
 
-    // Check admin via usersCollection (req.userRole is set by verifyRole middleware)
     const isAdmin = await usersCollection.findOne({ email, role: "admin" });
 
     const query = {};
