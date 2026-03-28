@@ -55,7 +55,7 @@ const Hero = () => {
           0.9,
         )
         .from(".h-stat-pill", { y: 18, opacity: 0, duration: 0.7 }, 0.95)
-        
+
 
       /* ── continuous float (GPU-only transform) ── */
       gsap.to(plantRef.current, {
@@ -333,7 +333,7 @@ const Hero = () => {
           </div>
 
           {/* ══ RIGHT: Visual ══ */}
-          <div className="relative flex justify-center lg:justify-end">
+          <div className="relative   flex justify-center lg:justify-end">
             {/* Plant image */}
             <div
               className="h-img-wrap relative z-10 w-full rounded-[28px] overflow-hidden border border-border"
@@ -477,7 +477,7 @@ const Hero = () => {
           </div>
         </div>
 
-        
+
       </div>
 
       {/* ── Responsive overrides + keyframes ── */}

@@ -4,39 +4,46 @@ import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import {
   TbPackage, TbTruckDelivery, TbCheckupList, TbClockHour4,
-  TbArrowUpRight, TbTrash, TbX, TbCheck, TbChevronDown,
-  TbMapPin, TbLeaf, TbRefresh,
+  TbTrash, TbCheck, TbMapPin, TbLeaf,
+  TbRefresh, TbLoader2, TbX,
 } from "react-icons/tb";
-import { TbLoader2 } from "react-icons/tb";
 import useOrders from "@/hooks/useOrders";
 import useUserRole from "@/hooks/useUserRole";
 import useAxiosSecure from "@/hooks/useAxiosSecure";
 import { useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
+import { cn } from "@/lib/utils";
 
 /* ─────────────────────────────────────────────
    STATUS CONFIG
 ───────────────────────────────────────────── */
-const STATUS_CFG = {
-  pending: { label: "Pending", color: "oklch(0.62 0.16 80)", bg: "oklch(0.97 0.04 80)", border: "oklch(0.85 0.08 80 / 0.5)" },
-  confirmed: { label: "Confirmed", color: "oklch(0.50 0.16 250)", bg: "oklch(0.96 0.03 250)", border: "oklch(0.82 0.08 250 / 0.5)" },
-  shipped: { label: "Shipped", color: "oklch(0.48 0.14 220)", bg: "oklch(0.95 0.03 220)", border: "oklch(0.80 0.08 220 / 0.5)" },
-  delivered: { label: "Delivered", color: "oklch(0.42 0.14 160)", bg: "oklch(0.95 0.04 160)", border: "oklch(0.80 0.10 160 / 0.5)" },
-  cancelled: { label: "Cancelled", color: "oklch(0.48 0.15 25)", bg: "oklch(0.97 0.03 25)", border: "oklch(0.85 0.08 25 / 0.5)" },
+const S = {
+  pending: { label: "Pending", dot: "bg-amber-400", badge: "bg-amber-50 text-amber-700 border-amber-200", bar: "bg-amber-400" },
+  confirmed: { label: "Confirmed", dot: "bg-blue-400", badge: "bg-blue-50 text-blue-700 border-blue-200", bar: "bg-blue-400" },
+  shipped: { label: "In Transit", dot: "bg-indigo-400", badge: "bg-indigo-50 text-indigo-700 border-indigo-200", bar: "bg-indigo-400" },
+  delivered: { label: "Delivered", dot: "bg-emerald-400", badge: "bg-emerald-50 text-emerald-700 border-emerald-200", bar: "bg-emerald-400" },
+  cancelled: { label: "Cancelled", dot: "bg-rose-400", badge: "bg-rose-50 text-rose-700 border-rose-200", bar: "bg-rose-400" },
 };
 
-/* Next allowed statuses per role */
-const SELLER_NEXT = {
-  pending: ["confirmed", "cancelled"],
-  confirmed: ["shipped"],
-  shipped: ["delivered"],
-  delivered: [],
-  cancelled: [],
+const NEXT = {
+  seller: {
+    pending: [{ status: "confirmed", label: "Confirm Order", icon: TbCheck },
+    { status: "cancelled", label: "Cancel Order", icon: TbX, danger: true }],
+    confirmed: [{ status: "shipped", label: "Mark as Shipped", icon: TbTruckDelivery }],
+    shipped: [{ status: "delivered", label: "Mark Delivered", icon: TbCheckupList }],
+    delivered: [],
+    cancelled: [],
+  },
+  buyer: {
+    pending: [{ status: "cancelled", label: "Cancel Order", icon: TbX, danger: true }],
+    confirmed: [],
+    shipped: [],
+    delivered: [],
+    cancelled: [],
+  },
 };
-const BUYER_NEXT = {
-  pending: ["cancelled"],
-  confirmed: [], shipped: [], delivered: [], cancelled: [],
-};
+
+const TERMINAL = ["delivered", "cancelled"];
 
 /* ─────────────────────────────────────────────
    MAIN PAGE
@@ -45,29 +52,47 @@ const MyOrders = () => {
   const { role } = useUserRole();
   const axiosSecure = useAxiosSecure();
   const queryClient = useQueryClient();
+  const container = useRef(null);
 
   const [perspective, setPerspective] = useState(role === "seller" ? "seller" : "customer");
   const [statusFilter, setStatusFilter] = useState("");
-  const [updating, setUpdating] = useState(null); // orderId being updated
+  const [updating, setUpdating] = useState(null);
 
   const { data: ordersData, isLoading, refetch } = useOrders({ perspective, status: statusFilter });
   const orders = ordersData?.data || [];
-  const container = useRef(null);
 
+  // ─────────────────────────────────────────────
+  // THE FIX: Kill stale tweens → hard-reset opacity
+  // → animate → clearProps so GSAP leaves no
+  // inline style residue on any element.
+  // ─────────────────────────────────────────────
   useGSAP(() => {
-    if (!isLoading) {
-      gsap.from(".order-row", {
-        y: 24, opacity: 0, stagger: 0.06, duration: 0.65, ease: "expo.out",
-      });
-    }
-  }, [isLoading, perspective, statusFilter]);
+    if (isLoading || !orders.length) return;
 
-  /* ── Status update ── */
+    // 1. Kill any in-flight tweens targeting .order-row
+    gsap.killTweensOf(".order-row");
+
+    // 2. Hard-reset ALL rows to visible so interrupted
+    //    rows are never left at opacity < 1
+    gsap.set(".order-row", { opacity: 1, y: 0, clearProps: "all" });
+
+    // 3. Now animate fresh — clearProps removes inline
+    //    style once the tween finishes
+    gsap.from(".order-row", {
+      y: 20,
+      opacity: 0,
+      stagger: 0.055,
+      duration: 0.65,
+      ease: "expo.out",
+      clearProps: "opacity,transform", // ← crucial: clean up when done
+    });
+  }, { scope: container, dependencies: [isLoading, perspective, statusFilter, orders.length] });
+
   const handleStatusChange = useCallback(async (orderId, newStatus) => {
-    setUpdating(orderId);
+    setUpdating(orderId + newStatus);
     try {
       await axiosSecure.patch(`/orders/${orderId}/status`, { status: newStatus });
-      toast.success(`Order marked as ${newStatus}`);
+      toast.success(newStatus === "cancelled" ? "Order cancelled" : `Marked as ${newStatus}`);
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       queryClient.invalidateQueries({ queryKey: ["tracking", orderId] });
     } catch (err) {
@@ -77,138 +102,115 @@ const MyOrders = () => {
     }
   }, [axiosSecure, queryClient]);
 
-  /* ── Delete (admin) ── */
   const handleDelete = useCallback(async (orderId) => {
-    if (!window.confirm("Permanently delete this order?")) return;
+    if (!window.confirm("Permanently delete this order? This cannot be undone.")) return;
     try {
       await axiosSecure.delete(`/orders/${orderId}`);
       toast.success("Order deleted");
       queryClient.invalidateQueries({ queryKey: ["orders"] });
-    } catch {
-      toast.error("Delete failed");
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Delete failed");
     }
   }, [axiosSecure, queryClient]);
 
-  const counts = {
-    all: orders.length,
-    pending: orders.filter(o => o.status === "pending").length,
-    shipped: orders.filter(o => o.status === "shipped").length,
-    delivered: orders.filter(o => o.status === "delivered").length,
+  const allOrders = ordersData?.data || [];
+  const cnt = {
+    all: ordersData?.totalCount || 0,
+    pending: allOrders.filter(o => o.status === "pending").length,
+    shipped: allOrders.filter(o => o.status === "shipped").length,
+    delivered: allOrders.filter(o => o.status === "delivered").length,
+    cancelled: allOrders.filter(o => o.status === "cancelled").length,
   };
 
   return (
-    <div ref={container} style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+    <div ref={container} className="flex flex-col gap-6">
 
       {/* ── Header ── */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 14 }}>
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 style={{
-            fontFamily: "'Georgia', serif",
-            fontSize: "clamp(1.6rem, 4vw, 2.4rem)",
-            fontWeight: 900, fontStyle: "italic",
-            letterSpacing: "-0.03em", color: "var(--foreground)", marginBottom: 4,
-          }}>
-            {perspective === "seller" ? "Sales Pipeline" : "My Purchases"}
+          <h1
+            className="font-black italic tracking-tight text-foreground"
+            style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(1.5rem, 3.5vw, 2.2rem)" }}
+          >
+            {perspective === "seller" ? "Sales Pipeline" : "My Orders"}
           </h1>
-          <p style={{ fontSize: 13, color: "var(--muted-foreground)", fontWeight: 500 }}>
-            {ordersData?.totalCount || 0} order{(ordersData?.totalCount || 0) !== 1 ? "s" : ""} found
+          <p className="text-sm text-muted-foreground font-medium mt-1">
+            {ordersData?.totalCount || 0} total orders
           </p>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          {/* Perspective toggle — sellers only */}
+        <div className="flex items-center gap-2 flex-wrap">
           {role === "seller" && (
-            <div style={{
-              display: "flex", padding: 4, borderRadius: 12,
-              background: "var(--accent)", border: "1px solid var(--border)",
-            }}>
+            <div className="flex p-1 rounded-xl bg-accent border border-border">
               {["seller", "customer"].map((p) => (
-                <button key={p} onClick={() => setPerspective(p)} style={{
-                  padding: "6px 16px", borderRadius: 8, border: "none",
-                  background: perspective === p ? "var(--card)" : "transparent",
-                  color: perspective === p ? "var(--primary)" : "var(--muted-foreground)",
-                  fontSize: 11, fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase",
-                  cursor: "pointer", transition: "all 0.18s",
-                  boxShadow: perspective === p ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
-                }}>
-                  {p === "seller" ? "Sales" : "Purchases"}
+                <button
+                  key={p}
+                  onClick={() => { setPerspective(p); setStatusFilter(""); }}
+                  className={cn(
+                    "px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
+                    perspective === p
+                      ? "bg-card text-primary shadow-sm border border-border"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {p === "seller" ? "My Sales" : "My Purchases"}
                 </button>
               ))}
             </div>
           )}
 
-          <button onClick={() => refetch()} style={{
-            width: 38, height: 38, borderRadius: 10,
-            border: "1px solid var(--border)", background: "var(--card)",
-            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-            color: "var(--muted-foreground)", transition: "all 0.18s",
-          }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--primary)"; e.currentTarget.style.color = "var(--primary)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--muted-foreground)"; }}
+          <button
+            onClick={() => refetch()}
+            className="w-9 h-9 rounded-xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-all"
           >
-            <TbRefresh size={16} />
+            <TbRefresh size={15} />
           </button>
         </div>
       </div>
 
-      {/* ── Stat chips ── */}
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+      {/* ── Filter chips ── */}
+      <div className="flex gap-2 flex-wrap">
         {[
-          { key: "", label: "All Orders", icon: TbPackage, val: counts.all },
-          { key: "pending", label: "Pending", icon: TbClockHour4, val: counts.pending },
-          { key: "shipped", label: "In Transit", icon: TbTruckDelivery, val: counts.shipped },
-          { key: "delivered", label: "Delivered", icon: TbCheckupList, val: counts.delivered },
+          { key: "", label: "All", icon: TbPackage, val: cnt.all },
+          { key: "pending", label: "Pending", icon: TbClockHour4, val: cnt.pending },
+          { key: "shipped", label: "In Transit", icon: TbTruckDelivery, val: cnt.shipped },
+          { key: "delivered", label: "Delivered", icon: TbCheckupList, val: cnt.delivered },
+          { key: "cancelled", label: "Cancelled", icon: TbX, val: cnt.cancelled },
+        // eslint-disable-next-line no-unused-vars
         ].map(({ key, label, icon: Icon, val }) => (
           <button
             key={key}
             onClick={() => setStatusFilter(key)}
-            style={{
-              display: "flex", alignItems: "center", gap: 8,
-              padding: "10px 16px", borderRadius: 12, cursor: "pointer",
-              border: statusFilter === key ? "1px solid var(--primary)" : "1px solid var(--border)",
-              background: statusFilter === key ? "var(--secondary)" : "var(--card)",
-              color: statusFilter === key ? "var(--primary)" : "var(--muted-foreground)",
-              transition: "all 0.18s",
-            }}
+            className={cn(
+              "flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-700 border transition-all",
+              statusFilter === key
+                ? "bg-secondary border-primary text-primary"
+                : "bg-card border-border text-muted-foreground hover:text-foreground hover:border-border/80",
+            )}
           >
-            <Icon size={14} />
-            <span style={{ fontSize: 12, fontWeight: 700 }}>{label}</span>
-            <span style={{
-              padding: "2px 8px", borderRadius: 999, fontSize: 10, fontWeight: 900,
-              background: statusFilter === key ? "var(--primary)" : "var(--accent)",
-              color: statusFilter === key ? "var(--primary-foreground)" : "var(--foreground)",
-            }}>
+            <Icon size={13} />
+            <span className="font-semibold">{label}</span>
+            <span className={cn(
+              "px-1.5 py-0.5 rounded-full text-[10px] font-black",
+              statusFilter === key ? "bg-primary text-primary-foreground" : "bg-accent text-foreground",
+            )}>
               {val}
             </span>
           </button>
         ))}
       </div>
 
-      {/* ── Table ── */}
+      {/* ── Content ── */}
       {isLoading ? (
-        <div style={{ display: "grid", gap: 10 }}>
-          {[...Array(4)].map((_, i) => (
-            <div key={i} style={{
-              height: 88, borderRadius: 18, border: "1px solid var(--border)",
-              background: "var(--card)", animation: "mo-shimmer 1.4s ease-in-out infinite",
-            }} />
+        <div className="flex flex-col gap-3">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-24 rounded-2xl border border-border bg-card animate-pulse" />
           ))}
         </div>
       ) : orders.length === 0 ? (
-        <div style={{
-          padding: "64px 24px", textAlign: "center",
-          borderRadius: 20, border: "1px dashed var(--border)", background: "var(--card)",
-        }}>
-          <TbLeaf size={36} style={{ color: "var(--primary)", opacity: 0.3, marginBottom: 12 }} />
-          <p style={{ fontFamily: "'Georgia', serif", fontSize: 18, fontWeight: 900, fontStyle: "italic", color: "var(--foreground)", marginBottom: 6 }}>
-            No orders found
-          </p>
-          <p style={{ fontSize: 13, color: "var(--muted-foreground)", fontWeight: 500 }}>
-            {statusFilter ? `No ${statusFilter} orders right now` : "You haven't placed any orders yet"}
-          </p>
-        </div>
+        <EmptyState filter={statusFilter} perspective={perspective} />
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div className="flex flex-col gap-3">
           {orders.map((order) => (
             <OrderRow
               key={order._id}
@@ -217,15 +219,11 @@ const MyOrders = () => {
               role={role}
               onStatusChange={handleStatusChange}
               onDelete={handleDelete}
-              isUpdating={updating === order._id}
+              updating={updating}
             />
           ))}
         </div>
       )}
-
-      <style>{`
-        @keyframes mo-shimmer { 0%,100%{opacity:0.5} 50%{opacity:1} }
-      `}</style>
     </div>
   );
 };
@@ -233,220 +231,266 @@ const MyOrders = () => {
 /* ─────────────────────────────────────────────
    ORDER ROW
 ───────────────────────────────────────────── */
-const OrderRow = ({ order, perspective, role, onStatusChange, onDelete, isUpdating }) => {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const cfg = STATUS_CFG[order.status] || STATUS_CFG.pending;
-
+const OrderRow = ({ order, perspective, role, onStatusChange, onDelete, updating }) => {
+  const cfg = S[order.status] || S.pending;
   const isSeller = perspective === "seller";
   const isAdmin = role === "admin";
-  const nextStatuses = isAdmin
-    ? Object.keys(STATUS_CFG).filter(s => s !== order.status && s !== "pending")
-    : isSeller
-      ? (SELLER_NEXT[order.status] || [])
-      : (BUYER_NEXT[order.status] || []);
+  const isTerminal = TERMINAL.includes(order.status);
 
-  const canDelete = isAdmin;
-  const hasActions = nextStatuses.length > 0 || canDelete;
+  const actions = isAdmin ? [] : (NEXT[isSeller ? "seller" : "buyer"]?.[order.status] || []);
+  const canDelete = isAdmin && order.status !== "delivered";
 
   return (
-    <div
-      className="order-row"
-      style={{
-        borderRadius: 18, border: "1px solid var(--border)",
-        // background: "var(--card)", overflow: "hidden",
-        transition: "border-color 0.22s, box-shadow 0.22s",
-      }}
-      onMouseEnter={(e) => { e.currentTarget.style.borderColor = cfg.border; e.currentTarget.style.boxShadow = `0 4px 20px ${cfg.color}18`; }}
-      onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.boxShadow = "none"; }}
-    >
-      {/* Colored top accent line */}
-      <div style={{ height: 3, background: cfg.color, opacity: 0.6 }} />
+    <div className={cn(
+      "order-row rounded-2xl border border-border bg-card overflow-hidden transition-all duration-200",
+      "hover:shadow-md hover:border-border/60",
+    )}>
+      {/* Status colour bar */}
+      <div className={cn("h-0.75", cfg.bar)} />
 
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "auto 1fr auto auto auto",
-        alignItems: "center",
-        gap: 16, padding: "14px 18px",
-      }} className="order-inner-grid">
-
-        {/* Image */}
+      {/* ── Desktop ── */}
+      <div
+        className="hidden sm:grid items-center gap-4 px-5 py-4"
+        style={{ gridTemplateColumns: "52px 1fr 120px 130px 160px" }}
+      >
         <img
           src={order.plantImage} alt={order.plantName}
-          style={{ width: 52, height: 52, borderRadius: 12, objectFit: "cover", border: "1px solid var(--border)", flexShrink: 0 }}
+          className="w-13 h-13 rounded-xl object-cover border border-border shrink-0"
         />
 
-        {/* Main info */}
-        <div style={{ minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
-            <h3 style={{
-              fontFamily: "'Georgia', serif", fontSize: 15, fontWeight: 900, fontStyle: "italic",
-              color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-            }}>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <h3
+              className="text-sm font-black italic text-foreground truncate"
+              style={{ fontFamily: "'Georgia', serif" }}
+            >
               {order.plantName}
             </h3>
-            <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--muted-foreground)", background: "var(--accent)", border: "1px solid var(--border)", padding: "2px 8px", borderRadius: 5 }}>
+            <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-accent border border-border text-muted-foreground shrink-0">
               {order.plantCategory}
             </span>
           </div>
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 11, color: "var(--muted-foreground)", fontWeight: 600 }}>
+          <div className="flex gap-3 flex-wrap">
+            <span className="text-xs text-muted-foreground font-semibold">
               {isSeller ? `👤 ${order.customer.name}` : `🌿 ${order.seller.name}`}
             </span>
-            <span style={{ fontSize: 11, color: "var(--muted-foreground)", fontWeight: 600 }}>
-              Qty: {order.quantity}
-            </span>
-            <span style={{ fontSize: 11, color: "var(--muted-foreground)", fontWeight: 600 }}>
+            <span className="text-xs text-muted-foreground font-semibold">Qty: {order.quantity}</span>
+            <span className="text-xs text-muted-foreground font-semibold">
               {new Date(order.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
             </span>
+            {order.payment?.method === "cod" && !isTerminal && (
+              <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-amber-50 border border-amber-200 text-amber-700">COD</span>
+            )}
+            {order.payment?.status === "paid" && (
+              <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-700">Paid ✓</span>
+            )}
           </div>
         </div>
 
-        {/* Price */}
-        <div style={{ textAlign: "right", flexShrink: 0 }}>
-          <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--muted-foreground)", marginBottom: 2 }}>Total</p>
-          <p style={{ fontFamily: "'Georgia', serif", fontSize: 18, fontWeight: 900, color: "var(--foreground)", lineHeight: 1 }}>
+        <div className="text-right">
+          <p className="text-[9px] font-black uppercase tracking-wider text-muted-foreground mb-0.5">Total</p>
+          <p className="text-lg font-black text-foreground leading-none" style={{ fontFamily: "'Georgia', serif" }}>
             ৳{order.totalPrice.toLocaleString()}
           </p>
         </div>
 
-        {/* Status badge */}
-        <div style={{ flexShrink: 0 }}>
-          <span style={{
-            display: "inline-flex", alignItems: "center", gap: 5,
-            padding: "5px 12px", borderRadius: 999,
-            background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}`,
-            fontSize: 10, fontWeight: 900, letterSpacing: "0.1em", textTransform: "uppercase",
-            whiteSpace: "nowrap",
-          }}>
-            <span style={{ width: 5, height: 5, borderRadius: "50%", background: cfg.color, flexShrink: 0 }} />
+        <div>
+          <span className={cn(
+            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border whitespace-nowrap",
+            cfg.badge,
+          )}>
+            <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", cfg.dot,
+              order.status === "shipped" && "animate-pulse"
+            )} />
             {cfg.label}
           </span>
         </div>
 
-        {/* Actions */}
-        <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-          {/* Track button */}
+        <ActionButtons
+          order={order}
+          actions={actions}
+          canDelete={canDelete}
+          isAdmin={isAdmin}
+          onStatusChange={onStatusChange}
+          onDelete={onDelete}
+          updating={updating}
+          isTerminal={isTerminal}
+        />
+      </div>
+
+      {/* ── Mobile ── */}
+      <div className="sm:hidden">
+        <div className="flex items-center gap-3 px-4 pt-4 pb-3">
+          <img
+            src={order.plantImage} alt={order.plantName}
+            className="w-12 h-12 rounded-xl object-cover border border-border shrink-0"
+          />
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-black italic text-foreground truncate" style={{ fontFamily: "'Georgia', serif" }}>
+              {order.plantName}
+            </h3>
+            <p className="text-xs text-muted-foreground font-semibold mt-0.5">
+              {isSeller ? order.customer.name : order.seller.name}
+            </p>
+          </div>
+          <span className={cn(
+            "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border shrink-0",
+            cfg.badge,
+          )}>
+            <span className={cn("w-1.5 h-1.5 rounded-full", cfg.dot)} />
+            {cfg.label}
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between px-4 pb-3 border-b border-border">
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-muted-foreground font-semibold">Qty: {order.quantity}</span>
+            <span className="text-xs text-muted-foreground font-semibold">
+              {new Date(order.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+            </span>
+            {order.payment?.status === "paid" && (
+              <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-700">Paid ✓</span>
+            )}
+          </div>
+          <p className="text-base font-black text-foreground" style={{ fontFamily: "'Georgia', serif" }}>
+            ৳{order.totalPrice.toLocaleString()}
+          </p>
+        </div>
+
+        {order.delivery?.address && (
+          <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border">
+            <TbMapPin size={12} className="text-muted-foreground shrink-0" />
+            <span className="text-xs text-muted-foreground font-medium truncate">
+              {order.delivery.address}{order.delivery.area ? `, ${order.delivery.area}` : ""}
+            </span>
+          </div>
+        )}
+
+        <div className="flex items-center gap-2 px-4 py-3 flex-wrap">
           <Link
             to={`/orders/track/${order._id}`}
-            style={{
-              display: "inline-flex", alignItems: "center", gap: 5,
-              height: 34, padding: "0 12px", borderRadius: 9,
-              border: "1px solid var(--border)", background: "var(--accent)",
-              color: "var(--muted-foreground)", fontSize: 11, fontWeight: 700,
-              textDecoration: "none", transition: "all 0.15s", whiteSpace: "nowrap",
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--primary)"; e.currentTarget.style.color = "var(--primary)"; e.currentTarget.style.background = "var(--secondary)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--muted-foreground)"; e.currentTarget.style.background = "var(--accent)"; }}
+            className="flex items-center gap-1.5 h-9 px-3 rounded-xl border border-border bg-accent text-muted-foreground text-[11px] font-bold hover:text-primary hover:border-primary transition-all"
           >
-            <TbMapPin size={13} />
-            <span className="hidden sm:inline">Track</span>
+            <TbMapPin size={13} /> Track
           </Link>
 
-          {/* Status / delete menu */}
-          {hasActions && (
-            <div style={{ position: "relative" }}>
-              <button
-                onClick={() => setMenuOpen((v) => !v)}
-                style={{
-                  height: 34, padding: "0 10px", borderRadius: 9,
-                  border: "1px solid var(--border)", background: "var(--card)",
-                  cursor: "pointer", display: "flex", alignItems: "center", gap: 4,
-                  color: "var(--muted-foreground)", fontSize: 11, fontWeight: 700,
-                  transition: "all 0.15s",
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--primary)"; e.currentTarget.style.color = "var(--primary)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--muted-foreground)"; }}
-              >
-                {isUpdating ? <TbLoader2 size={14} style={{ animation: "mo-spin 0.8s linear infinite" }} /> : <TbChevronDown size={14} />}
-                <span className="hidden sm:inline">Actions</span>
-              </button>
+          {actions.map((action) => (
+            <ActionBtn
+              key={action.status}
+              action={action}
+              orderId={order._id}
+              onStatusChange={onStatusChange}
+              updating={updating}
+            />
+          ))}
 
-              {menuOpen && (
-                <>
-                  {/* Click outside close */}
-                  <div className="z-100000" style={{ position: "fixed", inset: 0 }} onClick={() => setMenuOpen(false)} />
-                  <div style={{
-                    position: "absolute", top: "calc(100% - 50px)", right: 0,
-                    minWidth: 180, borderRadius: 14, zIndex: 100,
-                    background: "var(--card)", border: "1px solid var(--border)",
-                    // boxShadow: "0 8px 32px rgba(0,0,0,0.12)", overflow: "hidden",
-                    padding: 6,
-                  }}>
-                    {nextStatuses.length > 0 && (
-                      <p style={{ fontSize: 9, fontWeight: 900, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted-foreground)", padding: "4px 8px 6px" }}>
-                        Move to
-                      </p>
-                    )}
-                    {nextStatuses.map((ns) => {
-                      const nsCfg = STATUS_CFG[ns];
-                      return (
-                        <button key={ns} onClick={() => { setMenuOpen(false); onStatusChange(order._id, ns); }} style={{
-                          width: "100%", display: "flex", alignItems: "center", gap: 9,
-                          padding: "9px 10px", borderRadius: 9, border: "none",
-                          background: "transparent", cursor: "pointer",
-                          fontSize: 13, fontWeight: 700, color: nsCfg.color,
-                          textAlign: "left", transition: "background 0.15s",
-                        }}
-                          onMouseEnter={(e) => e.currentTarget.style.background = nsCfg.bg}
-                          onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
-                        >
-                          <span style={{ width: 7, height: 7, borderRadius: "50%", background: nsCfg.color, flexShrink: 0 }} />
-                          {nsCfg.label}
-                        </button>
-                      );
-                    })}
-
-                    {canDelete && (
-                      <>
-                        {nextStatuses.length > 0 && <div style={{ height: 1, background: "var(--border)", margin: "4px 0" }} />}
-                        <button onClick={() => { setMenuOpen(false); onDelete(order._id); }} style={{
-                          width: "100%", display: "flex", alignItems: "center", gap: 9,
-                          padding: "9px 10px", borderRadius: 9, border: "none",
-                          background: "transparent", cursor: "pointer",
-                          fontSize: 13, fontWeight: 700, color: "oklch(0.48 0.15 25)",
-                          textAlign: "left", transition: "background 0.15s",
-                        }}
-                          onMouseEnter={(e) => e.currentTarget.style.background = "oklch(0.97 0.03 25)"}
-                          onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
-                        >
-                          <TbTrash size={14} /> Delete Order
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
+          {canDelete && (
+            <button
+              onClick={() => onDelete(order._id)}
+              className="flex items-center gap-1.5 h-9 px-3 rounded-xl border border-rose-200 bg-rose-50 text-rose-600 text-[11px] font-bold hover:bg-rose-100 transition-all"
+            >
+              <TbTrash size={13} /> Delete
+            </button>
           )}
         </div>
       </div>
-
-      {/* Mobile-only: delivery address */}
-      <div className="mo-mobile-addr" style={{ padding: "0 18px 12px", display: "flex", alignItems: "center", gap: 6 }}>
-        <TbMapPin size={12} style={{ color: "var(--muted-foreground)", flexShrink: 0 }} />
-        <span style={{ fontSize: 11, color: "var(--muted-foreground)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {order.delivery.address}{order.delivery.area ? `, ${order.delivery.area}` : ""}
-        </span>
-      </div>
-
-      <style>{`
-        @keyframes mo-spin  { to { transform: rotate(360deg); } }
-        @media (min-width: 768px) { .mo-mobile-addr { display: none !important; } }
-        @media (max-width: 640px) {
-          .order-inner-grid {
-            grid-template-columns: auto 1fr !important;
-            grid-template-rows: auto auto auto !important;
-          }
-          .order-inner-grid > *:nth-child(3),
-          .order-inner-grid > *:nth-child(4),
-          .order-inner-grid > *:nth-child(5) {
-            grid-column: 1 / -1;
-            display: flex; justify-content: space-between; align-items: center;
-          }
-        }
-      `}</style>
     </div>
   );
 };
+
+/* ─────────────────────────────────────────────
+   ACTION BUTTONS (desktop)
+───────────────────────────────────────────── */
+const ActionButtons = ({ order, actions, canDelete, isAdmin, onStatusChange, onDelete, updating, isTerminal }) => (
+  <div className="flex items-center gap-2 justify-end flex-wrap">
+    <Link
+      to={`/orders/track/${order._id}`}
+      className="flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-accent text-muted-foreground text-[11px] font-semibold hover:text-primary hover:border-primary hover:bg-secondary transition-all whitespace-nowrap"
+    >
+      <TbMapPin size={12} />
+      <span>Track</span>
+    </Link>
+
+    {actions.map((action) => (
+      <ActionBtn
+        key={action.status}
+        action={action}
+        orderId={order._id}
+        onStatusChange={onStatusChange}
+        updating={updating}
+      />
+    ))}
+
+    {canDelete && (
+      <button
+        onClick={() => onDelete(order._id)}
+        className="flex items-center gap-1.5 h-8 px-3 rounded-lg border border-rose-200 bg-rose-50 text-rose-600 text-[11px] font-bold hover:bg-rose-100 active:scale-95 transition-all whitespace-nowrap"
+      >
+        <TbTrash size={12} />
+        <span>Delete</span>
+      </button>
+    )}
+
+    {isTerminal && !isAdmin && (
+      <span className="text-[10px] text-muted-foreground font-semibold italic">
+        {order.status === "delivered" ? "Completed ✓" : "Cancelled"}
+      </span>
+    )}
+  </div>
+);
+
+/* ─────────────────────────────────────────────
+   SINGLE ACTION BUTTON
+───────────────────────────────────────────── */
+const ActionBtn = ({ action, orderId, onStatusChange, updating }) => {
+  const { status, label, icon: Icon, danger } = action;
+  const isLoading = updating === orderId + status;
+
+  return (
+    <button
+      onClick={() => onStatusChange(orderId, status)}
+      disabled={!!updating}
+      className={cn(
+        "flex items-center gap-1.5 h-8 px-3 rounded-lg text-[11px] font-bold border transition-all active:scale-95 whitespace-nowrap",
+        danger
+          ? "border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-500 hover:text-white hover:border-rose-500"
+          : "border-primary/30 bg-secondary text-primary hover:bg-primary hover:text-primary-foreground hover:border-primary",
+        !!updating && "opacity-50 cursor-not-allowed",
+      )}
+    >
+      {isLoading ? <TbLoader2 size={12} className="animate-spin" /> : <Icon size={12} />}
+      <span>{label}</span>
+    </button>
+  );
+};
+
+/* ─────────────────────────────────────────────
+   EMPTY STATE
+───────────────────────────────────────────── */
+const EmptyState = ({ filter, perspective }) => (
+  <div className="flex flex-col items-center justify-center py-20 px-6 text-center rounded-2xl border border-dashed border-border bg-card">
+    <div className="w-16 h-16 rounded-full bg-secondary border border-border flex items-center justify-center mb-4">
+      <TbLeaf size={28} className="text-primary opacity-40" />
+    </div>
+    <h3 className="font-black italic text-foreground mb-2" style={{ fontFamily: "'Georgia', serif", fontSize: 20 }}>
+      {filter ? `No ${filter} orders` : "No orders yet"}
+    </h3>
+    <p className="text-sm text-muted-foreground font-medium max-w-xs">
+      {perspective === "seller"
+        ? "When customers order your plants, they'll appear here."
+        : filter
+          ? `You have no ${filter} orders right now.`
+          : "Browse the marketplace and place your first order."}
+    </p>
+    {!filter && perspective !== "seller" && (
+      <Link
+        to="/plants"
+        className="mt-5 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:opacity-90 transition-all"
+      >
+        Browse Plants →
+      </Link>
+    )}
+  </div>
+);
 
 export default MyOrders;

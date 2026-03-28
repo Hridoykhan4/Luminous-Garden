@@ -3,45 +3,122 @@ import { useParams, Link } from "react-router";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import {
-    TbArrowLeft, TbLeaf, TbCheck, TbTruckDelivery,
-    TbPackage, TbX, TbMapPin, TbRefresh, TbClockHour4,
+    TbArrowLeft,
+    TbLeaf,
+    TbCheck,
+    TbTruckDelivery,
+    TbPackage,
+    TbX,
+    TbMapPin,
+    TbRefresh,
+    TbClockHour4,
+    TbUser,
+    TbNotes,
+    TbShieldCheck,
 } from "react-icons/tb";
 import useTracking from "@/hooks/useTracking";
 import LoadingSpinner from "@/components/Shared/LoadingSpinner/LoadingSpinner";
 
-/* ─────────────────────────────────────────────
-   STATUS CONFIG  (same as MyOrders — could extract to shared)
-───────────────────────────────────────────── */
+/* ─────────────────────────────────────
+   STATUS CONFIG
+───────────────────────────────────── */
 const STATUS_CFG = {
-    pending: { label: "Order Placed", color: "oklch(0.62 0.16 80)", icon: TbPackage },
-    confirmed: { label: "Confirmed", color: "oklch(0.50 0.16 250)", icon: TbCheck },
-    shipped: { label: "Out for Delivery", color: "oklch(0.48 0.14 220)", icon: TbTruckDelivery },
-    delivered: { label: "Delivered", color: "oklch(0.42 0.14 160)", icon: TbLeaf },
-    cancelled: { label: "Cancelled", color: "oklch(0.48 0.15 25)", icon: TbX },
+    pending: {
+        label: "Order Placed",
+        shortLabel: "Placed",
+        color: "oklch(0.62 0.16 80)",
+        bg: "oklch(0.62 0.16 80 / 0.10)",
+        ring: "oklch(0.62 0.16 80 / 0.25)",
+        icon: TbPackage,
+        step: 0,
+    },
+    confirmed: {
+        label: "Confirmed",
+        shortLabel: "Confirmed",
+        color: "oklch(0.50 0.16 250)",
+        bg: "oklch(0.50 0.16 250 / 0.10)",
+        ring: "oklch(0.50 0.16 250 / 0.25)",
+        icon: TbShieldCheck,
+        step: 1,
+    },
+    shipped: {
+        label: "Out for Delivery",
+        shortLabel: "Shipped",
+        color: "oklch(0.55 0.18 220)",
+        bg: "oklch(0.55 0.18 220 / 0.10)",
+        ring: "oklch(0.55 0.18 220 / 0.25)",
+        icon: TbTruckDelivery,
+        step: 2,
+    },
+    delivered: {
+        label: "Delivered",
+        shortLabel: "Delivered",
+        color: "oklch(0.42 0.14 160)",
+        bg: "oklch(0.42 0.14 160 / 0.10)",
+        ring: "oklch(0.42 0.14 160 / 0.25)",
+        icon: TbLeaf,
+        step: 3,
+    },
+    cancelled: {
+        label: "Cancelled",
+        shortLabel: "Cancelled",
+        color: "oklch(0.52 0.18 25)",
+        bg: "oklch(0.52 0.18 25 / 0.10)",
+        ring: "oklch(0.52 0.18 25 / 0.25)",
+        icon: TbX,
+        step: -1,
+    },
 };
 
 const ALL_STEPS = ["pending", "confirmed", "shipped", "delivered"];
 
-/* ─────────────────────────────────────────────
-   GEOCODE (Nominatim — OSM, free, no key)
-───────────────────────────────────────────── */
+/* ─────────────────────────────────────
+   GEOCODE
+───────────────────────────────────── */
 async function geocode(address) {
-    try {
-        const q = encodeURIComponent(`${address}, Bangladesh`);
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`, {
-            headers: { "Accept-Language": "en", "User-Agent": "luminous-garden-app" },
-        });
-        const data = await res.json();
-        if (data[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-    } catch { 
-        // Hi
+    // Try progressively broader queries until one hits
+    const attempts = [
+        `${address}, Bangladesh`,
+        // Strip the street, try just area + district
+        `${address.split(",").slice(-2).join(",").trim()}, Bangladesh`,
+        // Last resort: just the district
+        `${address.split(",").at(-1).trim()}, Bangladesh`,
+    ];
+
+    for (const q of attempts) {
+        try {
+            const res = await fetch(
+                `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`,
+                { headers: { "Accept-Language": "en", "User-Agent": "luminous-garden-app" } }
+            );
+            const data = await res.json();
+            if (data[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+        } catch { 
+            //
+        }
     }
     return null;
 }
 
-/* ─────────────────────────────────────────────
+/* ─────────────────────────────────────
+   FORMAT DATE
+───────────────────────────────────── */
+function fmtDate(iso) {
+    return new Date(iso).toLocaleString("en-GB", {
+        day: "numeric", month: "short", year: "numeric",
+        hour: "2-digit", minute: "2-digit",
+    });
+}
+function fmtShort(iso) {
+    return new Date(iso).toLocaleString("en-GB", {
+        day: "numeric", month: "short",
+        hour: "2-digit", minute: "2-digit",
+    });
+}
+
+/* ─────────────────────────────────────
    COMPONENT
-───────────────────────────────────────────── */
+───────────────────────────────────── */
 const OrderTracking = () => {
     const { orderId } = useParams();
     const mapRef = useRef(null);
@@ -52,27 +129,26 @@ const OrderTracking = () => {
 
     const { data: tracking, isLoading, refetch, isFetching } = useTracking(orderId);
 
-    /* ── Page entrance ── */
+    /* ── entrance animation ── */
     useGSAP(() => {
         if (isLoading) return;
-        gsap.from(".trk-animate", {
-            y: 24, opacity: 0, stagger: 0.08, duration: 0.75, ease: "expo.out",
-        });
+        const tl = gsap.timeline();
+        tl.from(".ot-header", { y: -20, opacity: 0, duration: 0.6, ease: "expo.out" })
+            .from(".ot-card", {
+                y: 32, opacity: 0, stagger: 0.09, duration: 0.7, ease: "expo.out",
+            }, "-=0.3")
+            .from(".ot-step", {
+                scale: 0.7, opacity: 0, stagger: 0.07, duration: 0.5, ease: "back.out(2)",
+            }, "-=0.5");
     }, { scope: pageRef, dependencies: [isLoading] });
 
-    /* ── Build Leaflet map ── */
+    /* ── Leaflet map ── */
     useEffect(() => {
-        if (!tracking || !mapRef.current) return;
-        if (mapInstanceRef.current) return; 
-
-        let map;
+        if (!tracking || !mapRef.current || mapInstanceRef.current) return;
 
         const initMap = async () => {
             try {
-                
                 const L = (await import("leaflet")).default;
-
-               
                 delete L.Icon.Default.prototype._getIconUrl;
                 L.Icon.Default.mergeOptions({
                     iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
@@ -80,331 +156,429 @@ const OrderTracking = () => {
                     shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
                 });
 
-                const defaultCenter = [23.8103, 90.4125];
-                map = L.map(mapRef.current, { zoomControl: true, scrollWheelZoom: false }).setView(defaultCenter, 11);
+                const map = L.map(mapRef.current, {
+                    zoomControl: false,
+                    scrollWheelZoom: false,
+                    attributionControl: false,
+                }).setView([23.8103, 90.4125], 11);
 
-                /* OSM tile layer — completely free */
-                L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-                    attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>',
-                    maxZoom: 19,
-                }).addTo(map);
+                L.control.zoom({ position: "topright" }).addTo(map);
+                L.control.attribution({ position: "bottomright", prefix: false })
+                    .addAttribution('© <a href="https://openstreetmap.org">OSM</a>')
+                    .addTo(map);
 
+                L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
                 mapInstanceRef.current = map;
 
-                /* Geocode delivery address */
-                const deliveryAddress = `${tracking.delivery.address} ${tracking.delivery.area}`;
-                const deliveryCoords = await geocode(deliveryAddress);
+                const deliveryAddr = `${tracking.delivery.address} ${tracking.delivery.area}`;
+                const [deliveryCoords, sellerCoords] = await Promise.all([
+                    geocode(deliveryAddr),
+                    geocode("Dhaka, Bangladesh"),
+                ]);
 
-                /* Custom icons */
-                const destIcon = L.divIcon({
-                    html: `<div style="background:var(--primary);width:28px;height:28px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;">📦</div>`,
-                    className: "", iconSize: [28, 28], iconAnchor: [14, 14],
-                });
-                const sellerIcon = L.divIcon({
-                    html: `<div style="background:oklch(0.50 0.16 250);width:24px;height:24px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;">🌿</div>`,
-                    className: "", iconSize: [24, 24], iconAnchor: [12, 12],
+                const mkIcon = (emoji, color) => L.divIcon({
+                    html: `<div style="
+            background:${color};width:34px;height:34px;border-radius:50%;
+            border:3px solid white;box-shadow:0 4px 14px rgba(0,0,0,0.22);
+            display:flex;align-items:center;justify-content:center;font-size:15px;
+          ">${emoji}</div>`,
+                    className: "", iconSize: [34, 34], iconAnchor: [17, 17],
                 });
 
-                /* Delivery marker */
                 if (deliveryCoords) {
-                    const marker = L.marker([deliveryCoords.lat, deliveryCoords.lng], { icon: destIcon })
+                    L.marker([deliveryCoords.lat, deliveryCoords.lng], { icon: mkIcon("📦", "oklch(0.45 0.12 160)") })
                         .addTo(map)
-                        .bindPopup(`
-              <div style="font-family:sans-serif;padding:4px 0;">
-                <strong style="font-size:13px;">Delivery Address</strong><br/>
-                <span style="font-size:11px;color:#666;">${tracking.delivery.address}, ${tracking.delivery.area}</span>
-              </div>
-            `);
+                        .bindPopup(`<b style="font-size:12px">Delivery Address</b><br/><span style="font-size:11px;color:#666">${tracking.delivery.address}, ${tracking.delivery.area}</span>`);
                     map.setView([deliveryCoords.lat, deliveryCoords.lng], 13);
-                    marker.openPopup();
                 }
 
-                /* Seller marker (approximate — geocode seller area "Dhaka") */
-                const sellerCoords = await geocode("Dhaka, Bangladesh");
                 if (sellerCoords) {
-                    L.marker([sellerCoords.lat, sellerCoords.lng], { icon: sellerIcon })
+                    L.marker([sellerCoords.lat, sellerCoords.lng], { icon: mkIcon("🌿", "oklch(0.50 0.16 250)") })
                         .addTo(map)
-                        .bindPopup(`<div style="font-family:sans-serif;padding:4px 0;"><strong>Seller: ${tracking.seller.name}</strong></div>`);
+                        .bindPopup(`<b style="font-size:12px">Seller: ${tracking.seller.name}</b>`);
 
-                    /* Draw a dashed route line if we have both points */
                     if (deliveryCoords) {
-                        L.polyline(
-                            [[sellerCoords.lat, sellerCoords.lng], [deliveryCoords.lat, deliveryCoords.lng]],
-                            { color: "oklch(0.45 0.12 160)", weight: 2.5, dashArray: "8, 8", opacity: 0.65 }
-                        ).addTo(map);
-
-                        /* Fit bounds to show both markers */
-                        map.fitBounds([
-                            [sellerCoords.lat, sellerCoords.lng],
-                            [deliveryCoords.lat, deliveryCoords.lng],
-                        ], { padding: [40, 40] });
+                        L.polyline([[sellerCoords.lat, sellerCoords.lng], [deliveryCoords.lat, deliveryCoords.lng]], {
+                            color: "oklch(0.45 0.12 160)", weight: 2.5, dashArray: "8 10", opacity: 0.7,
+                        }).addTo(map);
+                        map.fitBounds([[sellerCoords.lat, sellerCoords.lng], [deliveryCoords.lat, deliveryCoords.lng]], { padding: [48, 48] });
                     }
                 }
 
                 setMapLoading(false);
             } catch (err) {
-                console.error("Map error:", err);
+                console.error(err);
                 setMapError(true);
                 setMapLoading(false);
             }
         };
 
         initMap();
-
-        return () => {
-            if (mapInstanceRef.current) {
-                mapInstanceRef.current.remove();
-                mapInstanceRef.current = null;
-            }
-        };
+        return () => { if (mapInstanceRef.current) { mapInstanceRef.current.remove(); mapInstanceRef.current = null; } };
     }, [tracking]);
 
+    /* ── guards ── */
     if (isLoading) return <LoadingSpinner />;
     if (!tracking) return (
-        <div className="container-page" style={{ paddingTop: 64, textAlign: "center" }}>
-            <p style={{ color: "var(--muted-foreground)", fontStyle: "italic" }}>Tracking data not found.</p>
-            <Link to="/dashboard" style={{ color: "var(--primary)", fontWeight: 700, textDecoration: "none", display: "block", marginTop: 16 }}>← Dashboard</Link>
+        <div className="container-page" style={{ paddingTop: 80, textAlign: "center" }}>
+            <p style={{ color: "var(--color-muted-foreground)", marginBottom: 16 }}>Tracking data not found.</p>
+            <Link to="/dashboard" style={{ color: "var(--color-primary)", fontWeight: 700 }}>← Dashboard</Link>
         </div>
     );
 
     const isCancelled = tracking.currentStatus === "cancelled";
-    const currentStepIdx = ALL_STEPS.indexOf(tracking.currentStatus);
+    const currentCfg = STATUS_CFG[tracking.currentStatus] || STATUS_CFG.pending;
+    const currentStep = ALL_STEPS.indexOf(tracking.currentStatus);
+    const progressPct = isCancelled ? 0 : Math.max(5, (currentStep / (ALL_STEPS.length - 1)) * 100);
 
     return (
-        <main ref={pageRef} className="container-page" style={{ paddingTop: 32, paddingBottom: 80 }}>
+        <main ref={pageRef} className="container-page" style={{ paddingTop: 28, paddingBottom: 80 }}>
 
-            {/* Back */}
-            <button
-                onClick={() => window.history.back()}
-                className="trk-animate"
-                style={{
-                    display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 28,
-                    background: "none", border: "none", cursor: "pointer",
-                    color: "var(--muted-foreground)", fontSize: 13, fontWeight: 600, padding: 0,
-                    transition: "color 0.18s",
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.color = "var(--foreground)"}
-                onMouseLeave={(e) => e.currentTarget.style.color = "var(--muted-foreground)"}
-            >
-                <TbArrowLeft size={16} /> Back to Orders
-            </button>
+            {/* ── LEAFLET CSS ── */}
+            <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+                integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossOrigin="" />
 
-            {/* Page header */}
-            <div className="trk-animate" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 28, gap: 12, flexWrap: "wrap" }}>
-                <div>
-                    <p style={{ fontSize: 10, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--muted-foreground)", marginBottom: 4 }}>
-                        Order Tracking
-                    </p>
-                    <h1 style={{
-                        fontFamily: "'Georgia', serif", fontSize: "clamp(1.5rem, 4vw, 2.2rem)",
-                        fontWeight: 900, fontStyle: "italic", letterSpacing: "-0.03em",
-                        color: "var(--foreground)", margin: 0,
+            {/* ── BACK + HEADER ── */}
+            <div className="ot-header" style={{ marginBottom: 28 }}>
+                <button
+                    onClick={() => window.history.back()}
+                    style={{
+                        display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 20,
+                        background: "none", border: "none", cursor: "pointer", padding: "6px 0",
+                        color: "var(--color-muted-foreground)", fontSize: 13, fontWeight: 600,
+                        transition: "color 0.2s",
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.color = "var(--color-foreground)"}
+                    onMouseLeave={e => e.currentTarget.style.color = "var(--color-muted-foreground)"}
+                >
+                    <TbArrowLeft size={15} /> Back to Orders
+                </button>
+
+                {/* Hero header card */}
+                <div style={{
+                    borderRadius: 24, overflow: "hidden",
+                    border: "1px solid var(--color-border)",
+                    background: "var(--color-card)",
+                    boxShadow: "0 2px 24px rgba(0,0,0,0.05)",
+                }}>
+                    {/* Top stripe with plant image */}
+                    <div style={{
+                        position: "relative", height: 90, overflow: "hidden",
+                        background: `linear-gradient(135deg, ${currentCfg.color}22, ${currentCfg.color}08)`,
                     }}>
-                        {tracking.plantName}
-                    </h1>
-                    <p style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 4, fontWeight: 500 }}>
-                        Order ID: #{String(orderId).slice(-8).toUpperCase()}
-                    </p>
-                </div>
+                        {/* Blurred plant bg */}
+                        <img src={tracking.plantImage} alt=""
+                            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.12, filter: "blur(12px) saturate(2)", transform: "scale(1.1)" }} />
+                        <div style={{ position: "absolute", inset: 0, background: `linear-gradient(to bottom, transparent 0%, var(--color-card) 100%)` }} />
+                    </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    {/* Current status badge */}
-                    {(() => {
-                        const cfg = STATUS_CFG[tracking.currentStatus] || STATUS_CFG.pending;
-                        return (
-                            <span style={{
-                                display: "inline-flex", alignItems: "center", gap: 6,
-                                padding: "7px 16px", borderRadius: 999, fontSize: 11, fontWeight: 900,
-                                letterSpacing: "0.1em", textTransform: "uppercase",
-                                background: `${cfg.color}18`, color: cfg.color,
-                                border: `1px solid ${cfg.color}33`,
+                    <div style={{ padding: "0 20px 20px", marginTop: -44, position: "relative" }}>
+                        <div style={{ display: "flex", gap: 14, alignItems: "flex-end", flexWrap: "wrap" }}>
+                            {/* Plant image */}
+                            <div style={{
+                                width: 72, height: 72, borderRadius: 18, overflow: "hidden",
+                                border: "3px solid var(--color-card)", flexShrink: 0,
+                                boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
                             }}>
-                                <span style={{ width: 6, height: 6, borderRadius: "50%", background: cfg.color, animation: tracking.currentStatus === "shipped" ? "trk-pulse 1.5s ease-in-out infinite" : "none" }} />
-                                {cfg.label}
-                            </span>
-                        );
-                    })()}
-                    <button onClick={() => refetch()} style={{
-                        width: 36, height: 36, borderRadius: 10,
-                        border: "1px solid var(--border)", background: "var(--card)",
-                        cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-                        color: "var(--muted-foreground)",
-                        animation: isFetching ? "trk-spin 1s linear infinite" : "none",
-                    }}>
-                        <TbRefresh size={15} />
-                    </button>
+                                <img src={tracking.plantImage} alt={tracking.plantName}
+                                    style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            </div>
+
+                            <div style={{ flex: 1, minWidth: 0, paddingBottom: 2 }}>
+                                <p style={{
+                                    fontSize: 10, fontWeight: 900, letterSpacing: "0.18em", textTransform: "uppercase",
+                                    color: "var(--color-muted-foreground)", marginBottom: 3,
+                                }}>Order Tracking</p>
+                                <h1 style={{
+                                    fontFamily: "'Georgia', 'Times New Roman', serif",
+                                    fontSize: "clamp(1.3rem, 3.5vw, 1.9rem)", fontWeight: 900, fontStyle: "italic",
+                                    letterSpacing: "-0.025em", color: "var(--color-foreground)", margin: 0,
+                                    lineHeight: 1.1,
+                                }}>
+                                    {tracking.plantName}
+                                </h1>
+                                <p style={{ fontSize: 11, color: "var(--color-muted-foreground)", fontWeight: 600, marginTop: 4 }}>
+                                    #{String(orderId).slice(-8).toUpperCase()}
+                                </p>
+                            </div>
+
+                            {/* Status pill + refresh */}
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                                <span style={{
+                                    display: "inline-flex", alignItems: "center", gap: 7,
+                                    padding: "8px 14px", borderRadius: 999,
+                                    background: currentCfg.bg, color: currentCfg.color,
+                                    border: `1.5px solid ${currentCfg.ring}`,
+                                    fontSize: 11, fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase",
+                                }}>
+                                    <span style={{
+                                        width: 7, height: 7, borderRadius: "50%", background: currentCfg.color,
+                                        animation: tracking.currentStatus === "shipped" ? "ot-pulse 1.5s ease-in-out infinite" : "none",
+                                        flexShrink: 0,
+                                    }} />
+                                    {currentCfg.label}
+                                </span>
+                                <button
+                                    onClick={() => refetch()}
+                                    title="Refresh"
+                                    style={{
+                                        width: 38, height: 38, borderRadius: 12,
+                                        border: "1.5px solid var(--color-border)", background: "var(--color-card)",
+                                        display: "flex", alignItems: "center", justifyContent: "center",
+                                        cursor: "pointer", color: "var(--color-muted-foreground)",
+                                        transition: "all 0.2s",
+                                        animation: isFetching ? "ot-spin 0.8s linear infinite" : "none",
+                                    }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = "var(--color-accent)"; e.currentTarget.style.color = "var(--color-primary)"; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = "var(--color-card)"; e.currentTarget.style.color = "var(--color-muted-foreground)"; }}
+                                >
+                                    <TbRefresh size={16} />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* ── PROGRESS BAR ── */}
+                        {!isCancelled && (
+                            <div style={{ marginTop: 20 }}>
+                                {/* Step labels */}
+                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                                    {ALL_STEPS.map((step, i) => {
+                                        const cfg = STATUS_CFG[step];
+                                        const done = i <= currentStep;
+                                        return (
+                                            <div key={step} className="ot-step" style={{
+                                                display: "flex", flexDirection: "column", alignItems: i === 0 ? "flex-start" : i === ALL_STEPS.length - 1 ? "flex-end" : "center",
+                                                flex: 1,
+                                            }}>
+                                                <span style={{
+                                                    fontSize: 9, fontWeight: 900, letterSpacing: "0.1em", textTransform: "uppercase",
+                                                    color: done ? cfg.color : "var(--color-muted-foreground)",
+                                                    transition: "color 0.3s",
+                                                }}>
+                                                    {cfg.shortLabel}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Track */}
+                                <div style={{ position: "relative", height: 6, borderRadius: 999, background: "var(--color-border)", overflow: "visible" }}>
+                                    {/* Fill */}
+                                    <div style={{
+                                        position: "absolute", left: 0, top: 0, bottom: 0,
+                                        width: `${progressPct}%`,
+                                        background: `linear-gradient(90deg, var(--color-primary), ${currentCfg.color})`,
+                                        borderRadius: 999, transition: "width 0.8s cubic-bezier(0.34,1.56,0.64,1)",
+                                    }} />
+                                    {/* Dots */}
+                                    {ALL_STEPS.map((step, i) => {
+                                        const pct = (i / (ALL_STEPS.length - 1)) * 100;
+                                        const done = i < currentStep;
+                                        const active = i === currentStep;
+                                        const cfg = STATUS_CFG[step];
+                                        const Icon = cfg.icon;
+                                        return (
+                                            <div key={step} style={{
+                                                position: "absolute", top: "50%",
+                                                left: `${pct}%`, transform: "translate(-50%, -50%)",
+                                                width: active ? 22 : 14, height: active ? 22 : 14,
+                                                borderRadius: "50%",
+                                                background: done || active ? cfg.color : "var(--color-card)",
+                                                border: done || active ? "none" : "2px solid var(--color-border)",
+                                                boxShadow: active ? `0 0 0 4px ${cfg.ring}, 0 2px 8px rgba(0,0,0,0.12)` : done ? "0 1px 4px rgba(0,0,0,0.1)" : "none",
+                                                display: "flex", alignItems: "center", justifyContent: "center",
+                                                transition: "all 0.3s ease",
+                                                zIndex: 2,
+                                            }}>
+                                                {(done || active) && <Icon size={active ? 11 : 8} color="white" />}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
-            {/* ─── 2-col layout ─── */}
-            <div style={{
-                display: "grid",
-                gridTemplateColumns: "1fr",
-                gap: 24,
-            }} className="trk-grid">
+            {/* ── MAIN GRID ── */}
+            <div className="ot-grid">
 
-                {/* LEFT: map + plant info */}
+                {/* ── LEFT COLUMN ── */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
-                    {/* MAP */}
-                    <div className="trk-animate" style={{ position: "relative" }}>
-                        {/* Inject leaflet CSS */}
-                        <link
-                            rel="stylesheet"
-                            href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-                            integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-                            crossOrigin=""
-                        />
-
-                        <div
-                            ref={mapRef}
-                            style={{
-                                width: "100%", height: 320, borderRadius: 20,
-                                border: "1px solid var(--border)",
-                                background: "var(--secondary)",
-                                overflow: "hidden",
-                                boxShadow: "0 4px 24px rgba(0,0,0,0.07)",
-                            }}
-                        />
-
-                        {mapLoading && (
-                            <div style={{
-                                position: "absolute", inset: 0, borderRadius: 20,
-                                background: "var(--card)", display: "flex", flexDirection: "column",
-                                alignItems: "center", justifyContent: "center", gap: 10,
-                                border: "1px solid var(--border)",
-                            }}>
-                                <div style={{ width: 32, height: 32, borderRadius: "50%", border: "3px solid var(--primary)", borderTopColor: "transparent", animation: "trk-spin 0.9s linear infinite" }} />
-                                <p style={{ fontSize: 12, color: "var(--muted-foreground)", fontWeight: 600 }}>Loading map…</p>
-                            </div>
-                        )}
-
-                        {mapError && (
-                            <div style={{
-                                position: "absolute", inset: 0, borderRadius: 20,
-                                background: "var(--card)", display: "flex", flexDirection: "column",
-                                alignItems: "center", justifyContent: "center", gap: 8,
-                                border: "1px solid var(--border)",
-                            }}>
-                                <TbMapPin size={32} style={{ color: "var(--muted-foreground)", opacity: 0.4 }} />
-                                <p style={{ fontSize: 13, color: "var(--muted-foreground)", fontWeight: 600 }}>Map unavailable</p>
-                            </div>
-                        )}
-
-                        {/* Map legend */}
-                        {!mapLoading && !mapError && (
-                            <div style={{
-                                position: "absolute", bottom: 12, left: 12,
-                                display: "flex", gap: 10, padding: "7px 12px", borderRadius: 10,
-                                background: "rgba(255,255,255,0.92)", backdropFilter: "blur(8px)",
-                                border: "1px solid var(--border)", zIndex: 1000,
-                                boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-                            }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                                    <span>🌿</span>
-                                    <span style={{ fontSize: 10, fontWeight: 700, color: "var(--muted-foreground)" }}>Seller</span>
-                                </div>
-                                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                                    <span>📦</span>
-                                    <span style={{ fontSize: 10, fontWeight: 700, color: "var(--muted-foreground)" }}>Your address</span>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Plant + delivery info card */}
-                    <div className="trk-animate" style={{
-                        borderRadius: 18, border: "1px solid var(--border)", background: "var(--card)", overflow: "hidden",
+                    {/* MAP CARD */}
+                    <div className="ot-card" style={{
+                        borderRadius: 20, overflow: "hidden",
+                        border: "1px solid var(--color-border)",
+                        background: "var(--color-card)",
+                        boxShadow: "0 2px 16px rgba(0,0,0,0.04)",
                     }}>
-                        <div style={{ display: "flex", gap: 14, padding: 16, borderBottom: "1px solid var(--border)" }}>
-                            <img src={tracking.plantImage} alt={tracking.plantName}
-                                style={{ width: 60, height: 60, borderRadius: 12, objectFit: "cover", border: "1px solid var(--border)", flexShrink: 0 }}
-                            />
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                                <p style={{ fontFamily: "'Georgia', serif", fontSize: 16, fontWeight: 900, fontStyle: "italic", color: "var(--foreground)", marginBottom: 3 }}>
-                                    {tracking.plantName}
-                                </p>
-                                <p style={{ fontSize: 11, color: "var(--muted-foreground)", fontWeight: 600 }}>
-                                    Seller: {tracking.seller.name}
-                                </p>
+                        <div style={{ padding: "14px 16px 10px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                                <TbMapPin size={14} style={{ color: "var(--color-primary)" }} />
+                                <span style={{ fontSize: 10, fontWeight: 900, letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--color-foreground)" }}>
+                                    Live Route
+                                </span>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                                <LegendDot emoji="🌿" label="Seller" />
+                                <LegendDot emoji="📦" label="Your address" />
                             </div>
                         </div>
 
-                        <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 8 }}>
-                            <InfoRow icon={TbMapPin} label="Delivery to" value={`${tracking.delivery.address}, ${tracking.delivery.area}`} />
-                            <InfoRow icon={TbClockHour4} label="Ordered on" value={new Date(tracking.createdAt).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })} />
-                            {tracking.delivery.note && (
-                                <InfoRow icon={TbPackage} label="Note" value={tracking.delivery.note} />
+                        <div style={{ position: "relative" }}>
+                            <div ref={mapRef} style={{ width: "100%", height: 280 }} />
+
+                            {mapLoading && (
+                                <div style={{
+                                    position: "absolute", inset: 0,
+                                    background: "var(--color-card)", display: "flex", flexDirection: "column",
+                                    alignItems: "center", justifyContent: "center", gap: 10,
+                                }}>
+                                    <div style={{
+                                        width: 36, height: 36, borderRadius: "50%",
+                                        border: "3px solid var(--color-border)", borderTopColor: "var(--color-primary)",
+                                        animation: "ot-spin 0.9s linear infinite",
+                                    }} />
+                                    <p style={{ fontSize: 12, color: "var(--color-muted-foreground)", fontWeight: 600 }}>Loading map…</p>
+                                </div>
                             )}
+
+                            {mapError && !mapLoading && (
+                                <div style={{
+                                    position: "absolute", inset: 0,
+                                    background: "var(--color-card)", display: "flex", flexDirection: "column",
+                                    alignItems: "center", justifyContent: "center", gap: 8,
+                                }}>
+                                    <TbMapPin size={32} style={{ color: "var(--color-muted-foreground)", opacity: 0.3 }} />
+                                    <p style={{ fontSize: 12, color: "var(--color-muted-foreground)", fontWeight: 600 }}>Map unavailable</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* DELIVERY INFO CARD */}
+                    <div className="ot-card" style={{
+                        borderRadius: 20, border: "1px solid var(--color-border)", background: "var(--color-card)",
+                        overflow: "hidden", boxShadow: "0 2px 16px rgba(0,0,0,0.04)",
+                    }}>
+                        <SectionHeader icon={TbMapPin} title="Delivery Details" />
+                        <div style={{ padding: "14px 16px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
+                            <InfoRow icon={TbMapPin} label="Deliver to"
+                                value={`${tracking.delivery.address}, ${tracking.delivery.area}`} />
+                            <InfoRow icon={TbClockHour4} label="Ordered on" value={fmtDate(tracking.createdAt)} />
+                            {tracking.delivery.note && (
+                                <InfoRow icon={TbNotes} label="Delivery note" value={tracking.delivery.note} />
+                            )}
+                        </div>
+                    </div>
+
+                    {/* PEOPLE CARD */}
+                    <div className="ot-card" style={{
+                        borderRadius: 20, border: "1px solid var(--color-border)", background: "var(--color-card)",
+                        overflow: "hidden", boxShadow: "0 2px 16px rgba(0,0,0,0.04)",
+                    }}>
+                        <SectionHeader icon={TbUser} title="People" />
+                        <div style={{ padding: "14px 16px 16px", display: "flex", flexDirection: "column", gap: 14 }}>
+                            {/* Customer */}
+                            <PersonRow
+                                photo={tracking.customer.photo}
+                                name={tracking.customer.name}
+                                meta={tracking.customer.email}
+                                tag="Customer"
+                                tagColor="oklch(0.50 0.16 250)"
+                            />
+                            <div style={{ height: 1, background: "var(--color-border)" }} />
+                            {/* Seller */}
+                            <PersonRow
+                                initials={tracking.seller.name.split(" ").map(w => w[0]).join("").slice(0, 2)}
+                                name={tracking.seller.name}
+                                meta={tracking.seller.email}
+                                tag="Seller"
+                                tagColor="oklch(0.42 0.14 160)"
+                            />
                         </div>
                     </div>
                 </div>
 
-                {/* RIGHT: progress steps + timeline */}
+                {/* ── RIGHT COLUMN ── */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
-                    {/* Progress stepper — horizontal on mobile, vertical on desktop */}
+                    {/* PROGRESS STEPS */}
                     {!isCancelled && (
-                        <div className="trk-animate" style={{
-                            borderRadius: 18, border: "1px solid var(--border)", background: "var(--card)",
-                            padding: 20,
+                        <div className="ot-card" style={{
+                            borderRadius: 20, border: "1px solid var(--color-border)", background: "var(--color-card)",
+                            overflow: "hidden", boxShadow: "0 2px 16px rgba(0,0,0,0.04)",
                         }}>
-                            <p style={{ fontSize: 10, fontWeight: 900, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted-foreground)", marginBottom: 18 }}>
-                                Delivery Progress
-                            </p>
-
-                            <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                            <SectionHeader icon={TbTruckDelivery} title="Delivery Progress" />
+                            <div style={{ padding: "14px 16px 16px" }}>
                                 {ALL_STEPS.map((step, idx) => {
                                     const cfg = STATUS_CFG[step];
                                     const Icon = cfg.icon;
-                                    const completed = idx < currentStepIdx;
-                                    const active = idx === currentStepIdx;
-                                    const upcoming = idx > currentStepIdx;
+                                    const completed = idx < currentStep;
+                                    const active = idx === currentStep;
+                                    const upcoming = idx > currentStep;
+                                    const isLast = idx === ALL_STEPS.length - 1;
 
                                     return (
-                                        <div key={step} style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+                                        <div key={step} className="ot-step" style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
                                             {/* Icon + connector */}
                                             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
                                                 <div style={{
-                                                    width: 36, height: 36, borderRadius: "50%",
-                                                    background: completed ? "var(--primary)" : active ? cfg.color : "var(--accent)",
-                                                    border: upcoming ? "2px solid var(--border)" : "none",
+                                                    width: 38, height: 38, borderRadius: "50%",
+                                                    background: completed ? "var(--color-primary)" : active ? cfg.color : "var(--color-accent)",
+                                                    border: upcoming ? "2px dashed var(--color-border)" : "none",
                                                     display: "flex", alignItems: "center", justifyContent: "center",
-                                                    transition: "all 0.3s",
-                                                    boxShadow: active ? `0 0 0 4px ${cfg.color}22` : "none",
+                                                    boxShadow: active ? `0 0 0 5px ${cfg.ring}` : "none",
+                                                    transition: "all 0.35s",
+                                                    flexShrink: 0,
                                                 }}>
                                                     {completed
                                                         ? <TbCheck size={16} color="white" />
-                                                        : <Icon size={16} color={upcoming ? "var(--border)" : "white"} />
+                                                        : <Icon size={16} color={upcoming ? "var(--color-border)" : "white"} />
                                                     }
                                                 </div>
-                                                {idx < ALL_STEPS.length - 1 && (
+                                                {!isLast && (
                                                     <div style={{
-                                                        width: 2, height: 28,
-                                                        background: completed ? "var(--primary)" : "var(--border)",
+                                                        width: 2, height: 30,
+                                                        background: completed
+                                                            ? "var(--color-primary)"
+                                                            : "linear-gradient(var(--color-border), transparent)",
+                                                        borderRadius: 2, margin: "3px 0",
                                                         transition: "background 0.3s",
-                                                        borderRadius: 1,
                                                     }} />
                                                 )}
                                             </div>
 
                                             {/* Label */}
-                                            <div style={{ paddingTop: 7, paddingBottom: idx < ALL_STEPS.length - 1 ? 14 : 0 }}>
-                                                <p style={{
-                                                    fontSize: 13, fontWeight: active ? 900 : 700,
-                                                    color: upcoming ? "var(--muted-foreground)" : active ? cfg.color : "var(--foreground)",
-                                                    marginBottom: 2,
-                                                }}>
-                                                    {cfg.label}
-                                                </p>
-                                                {active && (
-                                                    <p style={{ fontSize: 11, color: "var(--muted-foreground)", fontWeight: 500 }}>
-                                                        In progress
+                                            <div style={{ paddingTop: 8, paddingBottom: isLast ? 0 : 18, flex: 1, minWidth: 0 }}>
+                                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                                    <p style={{
+                                                        fontSize: 13, fontWeight: active ? 900 : 700, margin: 0,
+                                                        color: upcoming ? "var(--color-muted-foreground)" : active ? cfg.color : "var(--color-foreground)",
+                                                    }}>
+                                                        {cfg.label}
                                                     </p>
-                                                )}
-                                                {completed && (
-                                                    <p style={{ fontSize: 11, color: "var(--muted-foreground)", fontWeight: 500 }}>
-                                                        Completed
+                                                    {active && (
+                                                        <span style={{
+                                                            fontSize: 9, fontWeight: 900, letterSpacing: "0.1em", textTransform: "uppercase",
+                                                            padding: "2px 8px", borderRadius: 999,
+                                                            background: cfg.bg, color: cfg.color,
+                                                        }}>Now</span>
+                                                    )}
+                                                    {completed && (
+                                                        <span style={{
+                                                            fontSize: 9, fontWeight: 900, letterSpacing: "0.1em", textTransform: "uppercase",
+                                                            padding: "2px 8px", borderRadius: 999,
+                                                            background: "oklch(0.45 0.12 160 / 0.1)", color: "var(--color-primary)",
+                                                        }}>Done</span>
+                                                    )}
+                                                </div>
+                                                {upcoming && (
+                                                    <p style={{ fontSize: 11, color: "var(--color-muted-foreground)", fontWeight: 500, margin: "2px 0 0" }}>
+                                                        Upcoming
                                                     </p>
                                                 )}
                                             </div>
@@ -415,50 +589,47 @@ const OrderTracking = () => {
                         </div>
                     )}
 
-                    {/* ── Timeline ── */}
-                    <div className="trk-animate" style={{
-                        borderRadius: 18, border: "1px solid var(--border)", background: "var(--card)",
-                        padding: 20,
+                    {/* TIMELINE */}
+                    <div className="ot-card" style={{
+                        borderRadius: 20, border: "1px solid var(--color-border)", background: "var(--color-card)",
+                        overflow: "hidden", boxShadow: "0 2px 16px rgba(0,0,0,0.04)",
                     }}>
-                        <p style={{ fontSize: 10, fontWeight: 900, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted-foreground)", marginBottom: 18 }}>
-                            Activity Timeline
-                        </p>
-
-                        <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-                            {[...tracking.events].reverse().map((event, idx) => {
+                        <SectionHeader icon={TbClockHour4} title="Activity Timeline" />
+                        <div style={{ padding: "14px 16px 16px" }}>
+                            {[...tracking.events].reverse().map((event, idx, arr) => {
                                 const cfg = STATUS_CFG[event.status] || STATUS_CFG.pending;
                                 const Icon = cfg.icon;
-                                const isLast = idx === tracking.events.length - 1;
+                                const isLast = idx === arr.length - 1;
 
                                 return (
                                     <div key={idx} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
                                         {/* Dot + line */}
                                         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
                                             <div style={{
-                                                width: 30, height: 30, borderRadius: "50%",
-                                                background: `${cfg.color}18`, border: `1px solid ${cfg.color}44`,
+                                                width: 32, height: 32, borderRadius: "50%",
+                                                background: cfg.bg, border: `1.5px solid ${cfg.ring}`,
                                                 display: "flex", alignItems: "center", justifyContent: "center",
                                             }}>
                                                 <Icon size={14} style={{ color: cfg.color }} />
                                             </div>
                                             {!isLast && (
-                                                <div style={{ width: 1, height: 24, background: "var(--border)", borderRadius: 1 }} />
+                                                <div style={{ width: 1.5, height: 28, background: "var(--color-border)", borderRadius: 2, margin: "3px 0" }} />
                                             )}
                                         </div>
 
                                         {/* Content */}
-                                        <div style={{ paddingTop: 4, paddingBottom: isLast ? 0 : 16, flex: 1, minWidth: 0 }}>
-                                            <p style={{ fontSize: 13, fontWeight: 800, color: "var(--foreground)", marginBottom: 2 }}>
+                                        <div style={{ paddingTop: 5, paddingBottom: isLast ? 0 : 20, flex: 1, minWidth: 0 }}>
+                                            <p style={{ fontSize: 13, fontWeight: 800, color: "var(--color-foreground)", margin: "0 0 2px" }}>
                                                 {event.title}
                                             </p>
-                                            <p style={{ fontSize: 11, color: "var(--muted-foreground)", fontWeight: 500, marginBottom: 3, lineHeight: 1.5 }}>
+                                            <p style={{ fontSize: 11, color: "var(--color-muted-foreground)", fontWeight: 500, margin: "0 0 4px", lineHeight: 1.55 }}>
                                                 {event.description}
                                             </p>
-                                            <p style={{ fontSize: 10, color: "var(--muted-foreground)", fontWeight: 700, letterSpacing: "0.04em" }}>
-                                                {new Date(event.timestamp).toLocaleString("en-GB", {
-                                                    day: "numeric", month: "short",
-                                                    hour: "2-digit", minute: "2-digit",
-                                                })}
+                                            <p style={{
+                                                fontSize: 10, color: "var(--color-muted-foreground)", fontWeight: 700,
+                                                letterSpacing: "0.04em", margin: 0,
+                                            }}>
+                                                {fmtShort(event.timestamp)}
                                             </p>
                                         </div>
                                     </div>
@@ -469,33 +640,111 @@ const OrderTracking = () => {
                 </div>
             </div>
 
-            {/* Responsive grid */}
+            {/* ── STYLES ── */}
             <style>{`
-        @keyframes trk-spin  { to { transform: rotate(360deg); } }
-        @keyframes trk-pulse { 0%,100%{opacity:1;box-shadow:0 0 0 0 currentColor} 50%{opacity:.7;box-shadow:0 0 0 4px transparent} }
-
-        @media (min-width: 900px) {
-          .trk-grid { grid-template-columns: 1fr 400px !important; align-items: start; }
+        @keyframes ot-spin  { to { transform: rotate(360deg); } }
+        @keyframes ot-pulse {
+          0%,100% { opacity: 1; box-shadow: 0 0 0 0 currentColor; }
+          50%      { opacity: .7; box-shadow: 0 0 0 5px transparent; }
         }
+
+        .ot-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 16px;
+          align-items: start;
+        }
+
         @media (min-width: 768px) {
-          .trk-grid { grid-template-columns: 1fr 380px !important; }
-          [ref=mapRef] { height: 420px !important; }
+          .ot-grid {
+            grid-template-columns: 1fr 360px;
+            gap: 20px;
+          }
+        }
+
+        @media (min-width: 1024px) {
+          .ot-grid {
+            grid-template-columns: 1fr 400px;
+            gap: 24px;
+          }
         }
       `}</style>
         </main>
     );
 };
 
-/* ─────────────────────────────────────────────
-   HELPER
-───────────────────────────────────────────── */
+/* ─────────────────────────────────────
+   SUB-COMPONENTS
+───────────────────────────────────── */
+// eslint-disable-next-line no-unused-vars
+const SectionHeader = ({ icon: Icon, title }) => (
+    <div style={{
+        padding: "12px 16px", borderBottom: "1px solid var(--color-border)",
+        display: "flex", alignItems: "center", gap: 7,
+    }}>
+        <Icon size={13} style={{ color: "var(--color-primary)", flexShrink: 0 }} />
+        <span style={{
+            fontSize: 10, fontWeight: 900, letterSpacing: "0.16em",
+            textTransform: "uppercase", color: "var(--color-foreground)",
+        }}>{title}</span>
+    </div>
+);
+
+// eslint-disable-next-line no-unused-vars
 const InfoRow = ({ icon: Icon, label, value }) => (
     <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-        <Icon size={14} style={{ color: "var(--muted-foreground)", flexShrink: 0, marginTop: 1 }} />
-        <div style={{ minWidth: 0 }}>
-            <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted-foreground)", display: "block", marginBottom: 1 }}>{label}</span>
-            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", lineHeight: 1.5 }}>{value}</span>
+        <div style={{
+            width: 28, height: 28, borderRadius: 8, background: "var(--color-accent)",
+            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+        }}>
+            <Icon size={13} style={{ color: "var(--color-primary)" }} />
         </div>
+        <div style={{ minWidth: 0 }}>
+            <span style={{
+                display: "block", fontSize: 9, fontWeight: 900, letterSpacing: "0.14em",
+                textTransform: "uppercase", color: "var(--color-muted-foreground)", marginBottom: 2,
+            }}>{label}</span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-foreground)", lineHeight: 1.5 }}>
+                {value}
+            </span>
+        </div>
+    </div>
+);
+
+const PersonRow = ({ photo, initials, name, meta, tag, tagColor }) => (
+    <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        {photo ? (
+            <img src={photo} alt={name} style={{
+                width: 38, height: 38, borderRadius: 12, objectFit: "cover",
+                border: "1.5px solid var(--color-border)", flexShrink: 0,
+            }} />
+        ) : (
+            <div style={{
+                width: 38, height: 38, borderRadius: 12, flexShrink: 0,
+                background: `${tagColor}18`, border: `1.5px solid ${tagColor}30`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 13, fontWeight: 900, color: tagColor, letterSpacing: "-0.02em",
+            }}>
+                {initials}
+            </div>
+        )}
+        <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 13, fontWeight: 800, color: "var(--color-foreground)", margin: "0 0 2px" }}>{name}</p>
+            <p style={{ fontSize: 11, color: "var(--color-muted-foreground)", fontWeight: 500, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{meta}</p>
+        </div>
+        <span style={{
+            fontSize: 9, fontWeight: 900, letterSpacing: "0.1em", textTransform: "uppercase",
+            padding: "4px 10px", borderRadius: 999,
+            background: `${tagColor}14`, color: tagColor, border: `1px solid ${tagColor}25`,
+            flexShrink: 0,
+        }}>{tag}</span>
+    </div>
+);
+
+const LegendDot = ({ emoji, label }) => (
+    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        <span style={{ fontSize: 11 }}>{emoji}</span>
+        <span style={{ fontSize: 10, fontWeight: 700, color: "var(--color-muted-foreground)" }}>{label}</span>
     </div>
 );
 

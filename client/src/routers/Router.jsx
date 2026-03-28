@@ -12,6 +12,7 @@ import AdminRoute from "./AdminRoute";
 import LoadingSpinner from "@/components/Shared/LoadingSpinner/LoadingSpinner";
 import ErrorPage from "../pages/ErrorPage/ErrorPage";
 import Forbidden from "@/pages/Forbidden/Forbidden";
+import UserRoute from "./UserRoute";
 
 // --- 1. Lazy Loading ---
 // eslint-disable-next-line no-unused-vars
@@ -48,6 +49,10 @@ const Profile = Loadable(
 const MyOrders = Loadable(
   lazy(() => import("../pages/Dashboard/Common/MyOrders")),
 );
+
+
+// Customer Pages
+const BeSeller = Loadable(lazy(() => import('../pages/Dashboard/Customer/BeSeller')))
 
 
 // Dashboard: Seller
@@ -102,6 +107,14 @@ const Router = createBrowserRouter([
       { index: true, element: <Statistics /> },
       { path: "profile", element: <Profile /> },
       { path: "my-orders", element: <MyOrders /> },
+
+      // Customer Routes
+      {
+        path: 'be-seller',
+        element: <UserRoute>
+          <BeSeller></BeSeller>
+        </UserRoute>
+      },
 
       // 🟡 Seller Routes
       {

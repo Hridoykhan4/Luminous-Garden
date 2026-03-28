@@ -4,6 +4,7 @@ const {
   getUsers,
   getUserRole,
 } = require("../controllers/user.controller");
+const { verifyRole, verifyToken } = require("../middlewares/auth.middleware");
 
 const userRoutes = (usersCollection) => {
   const router = express.Router();
@@ -12,7 +13,7 @@ const userRoutes = (usersCollection) => {
     syncUser(req, res, usersCollection).catch(next),
   );
 
-  router.get("/", (req, res, next) =>
+  router.get("/", verifyToken, verifyRole(usersCollection, ['admin']), (req, res, next) =>
     getUsers(req, res, usersCollection).catch(next),
   );
 

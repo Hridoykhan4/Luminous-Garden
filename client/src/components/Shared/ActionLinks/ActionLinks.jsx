@@ -2,8 +2,8 @@ import { Link } from "react-router";
 import { Button } from "@/components/ui/button";
 import { TbPlus, TbLayoutDashboard, TbLogin, TbUserPlus } from "react-icons/tb";
 
-const ActionLinks = ({ role , isRoleLoading}) => {
-    if (isRoleLoading) return <div className="h-14 w-40 bg-secondary animate-pulse rounded-2xl" />;
+const ActionLinks = ({ role, isRoleLoading }) => {
+  if (isRoleLoading) return <div className="h-14 w-40 bg-secondary animate-pulse rounded-2xl" />;
   if (!role) {
     return (
       <div className="flex flex-wrap gap-4">
@@ -70,12 +70,22 @@ const ActionLinks = ({ role , isRoleLoading}) => {
 
   // 4. Customer Logic
   return (
-    <Button
-      asChild
-      className="bg-primary text-primary-foreground h-14 px-10 rounded-2xl font-black italic tracking-tight shadow-xl shadow-primary/10 hover-lift"
-    >
-      <Link to="/plants">Browse Collection</Link>
-    </Button>
+    <div className="flex flex-wrap gap-4">
+
+      <Button
+        asChild
+        className="bg-primary text-primary-foreground h-14 px-10 rounded-2xl font-black italic tracking-tight shadow-xl shadow-primary/10 hover-lift"
+      >
+        <Link to="/plants">Browse Collection</Link>
+      </Button>
+      <Button
+        asChild
+        variant="secondary"
+        className="h-14 px-8 rounded-2xl font-bold hover-lift"
+      >
+        <Link to="/dashboard/be-seller">Become Seller</Link>
+      </Button>
+    </div>
   );
 };
 

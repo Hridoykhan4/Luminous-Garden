@@ -8,6 +8,7 @@ import {
   MdManageAccounts,
   MdLogout,
   MdReceiptLong,
+  MdStorefront,
 } from "react-icons/md";
 import { TbLeaf, TbLayoutDashboard } from "react-icons/tb";
 import { cn } from "@/lib/utils";
@@ -28,6 +29,7 @@ const NAV_CONFIG = {
   ],
   customer: [
     { label: "My Orders", to: "/dashboard/my-orders", icon: MdReceiptLong },
+    { label: "Become a Seller", to: "/dashboard/be-seller", icon: MdStorefront },
   ],
   seller: [
     { label: "My Orders", to: "/dashboard/my-orders", icon: MdReceiptLong },
@@ -197,7 +199,7 @@ const DashboardLayout = () => {
         </header>
 
         {/* CONTENT */}
-        <div ref={outletRef} className="px-10 pb-16 max-w-[1600px] w-full">
+        <div ref={outletRef} className="px-10 pb-16 max-w-400 w-full">
           <Outlet />
         </div>
       </main>
