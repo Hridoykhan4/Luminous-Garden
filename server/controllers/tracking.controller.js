@@ -128,7 +128,7 @@ const getTracking = asyncHandler(async (req, res, trackingCollection, usersColle
   }
 
   // Access check — only buyer, seller of this order, or admin
-  const email = req.user.email;
+  const email = req.user?.email;
   const user = await usersCollection.findOne({ email: req.user.email });
   const role = user?.role;
 
