@@ -255,6 +255,9 @@ const deleteOrder = asyncHandler(
         .json({ success: false, message: "Invalid order ID" });
     }
 
+
+    if(await ordersCollection.findOne({_id: new ObjectId(id)}).status === 'delivered') return res.status(409).send({message: 'Already Delivered ! '})
+
     const result = await ordersCollection.deleteOne({ _id: new ObjectId(id) });
     if (result.deletedCount === 0) {
       return res
