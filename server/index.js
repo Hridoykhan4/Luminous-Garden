@@ -73,9 +73,9 @@ async function run() {
       sellerRequestRoutes(sellerRequestsCollection, usersCollection),
     );
 
-    console.log("✅ Database connected & all routes initialized");
+    console.log("Database connected & all routes initialized");
   } catch (err) {
-    console.error("❌ Failed to connect to MongoDB:", err);
+    console.error("Failed to connect to MongoDB:", err);
     process.exit(1);
   }
 }

@@ -26,7 +26,7 @@ const syncUser = async (req, res, usersCollection) => {
     },
     {
       upsert: true,
-      returnDocument: "after", // returns the doc AFTER the update
+      returnDocument: "after", 
     },
   );
 
