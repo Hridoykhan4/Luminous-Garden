@@ -5,8 +5,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
-    TbBuildingStore, TbMapPin, TbId, TbPhone,
-    TbFileText, TbCheck, TbLoader2, TbLeaf,
+    TbBuildingStore, TbId,
+    TbLoader2, TbLeaf,
     TbAlertCircle, TbClockHour4, TbShieldCheck,
 } from "react-icons/tb";
 import useAxiosSecure from "@/hooks/useAxiosSecure";
@@ -283,6 +283,7 @@ const inputCls = (err) => cn(
     err ? "border-destructive/60 bg-destructive/5" : "border-border"
 );
 
+// eslint-disable-next-line no-unused-vars
 const FormSectionHead = ({ icon: Icon, title }) => (
     <div className="px-5 py-3.5 border-b border-border flex items-center gap-2">
         <Icon size={13} className="text-primary" />

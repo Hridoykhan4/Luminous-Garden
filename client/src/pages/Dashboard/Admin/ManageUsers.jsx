@@ -1,11 +1,10 @@
 import { useState, useRef, useCallback } from "react";
-import { useGSAP } from "@gsap/react";
-import gsap from "gsap";
 import {
-    TbUsers, TbShield, TbCheck, TbX, TbSearch,
-    TbRefresh, TbLoader2, TbEye, TbBan, TbUserCheck,
-    TbBuildingStore, TbClockHour4, TbChevronDown,
-    TbAlertCircle, TbFilter, TbMapPin,
+    TbUsers, TbCheck, TbX, TbSearch,
+    TbRefresh, TbLoader2, TbEye, TbBan,
+    TbBuildingStore,
+    TbChevronDown,
+
 } from "react-icons/tb";
 import { MdVerified } from "react-icons/md";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -88,12 +87,6 @@ const ManageUsers = () => {
         u.email?.toLowerCase().includes(search.toLowerCase())
     );
 
-    useGSAP(() => {
-        gsap.killTweensOf(".mu-row");
-        gsap.set(".mu-row", { clearProps: "all" });
-        gsap.from(".mu-row", { y: 16, opacity: 0, stagger: 0.04, duration: 0.5, ease: "expo.out", clearProps: "opacity,transform" });
-    }, { scope: pageRef, dependencies: [tab, usersLoading, reqLoading, roleFilter] });
-
     /* ── actions ── */
     const updateRole = useCallback(async (userId, role) => {
         setActionLoading(userId + role);
@@ -121,7 +114,7 @@ const ManageUsers = () => {
         }
     }, [axiosSecure, queryClient]);
 
-    const handleRequest = useCallback(async (reqId, action, userId) => {
+    const handleRequest = useCallback(async (reqId, action) => {
         setActionLoading(reqId + action);
         try {
             await axiosSecure.patch(`/seller-requests/${reqId}`, { action });
