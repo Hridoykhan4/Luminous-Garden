@@ -174,7 +174,7 @@ const MyOrders = () => {
           { key: "shipped", label: "In Transit", icon: TbTruckDelivery, val: cnt.shipped },
           { key: "delivered", label: "Delivered", icon: TbCheckupList, val: cnt.delivered },
           { key: "cancelled", label: "Cancelled", icon: TbX, val: cnt.cancelled },
-        // eslint-disable-next-line no-unused-vars
+          // eslint-disable-next-line no-unused-vars
         ].map(({ key, label, icon: Icon, val }) => (
           <button
             key={key}

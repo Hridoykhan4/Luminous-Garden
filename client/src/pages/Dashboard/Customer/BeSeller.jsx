@@ -112,7 +112,7 @@ const BeSeller = () => {
     return (
         <div ref={pageRef} className="py-6 flex flex-col gap-6">
 
-            {/* Header */}
+           
             <div className="bs-card">
                 <div className="flex items-start gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
