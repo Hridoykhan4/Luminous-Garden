@@ -14,9 +14,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
 
-/* ─────────────────────────────────────────────
-   STATUS CONFIG
-───────────────────────────────────────────── */
+
 const S = {
   pending: { label: "Pending", dot: "bg-amber-400", badge: "bg-amber-50 text-amber-700 border-amber-200", bar: "bg-amber-400" },
   confirmed: { label: "Confirmed", dot: "bg-blue-400", badge: "bg-blue-50 text-blue-700 border-blue-200", bar: "bg-blue-400" },
