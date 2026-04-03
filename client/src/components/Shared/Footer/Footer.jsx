@@ -1,7 +1,7 @@
 const Footer = () => {
     return (
         <div>
-        Footer            
+            Lorem ipsum dolor sit amet consectetur adipisicing elit. Veniam, rerum.
         </div>
     );
 };
