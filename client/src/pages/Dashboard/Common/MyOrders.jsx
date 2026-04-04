@@ -59,30 +59,20 @@ const MyOrders = () => {
   const { data: ordersData, isLoading, refetch } = useOrders({ perspective, status: statusFilter });
   const orders = ordersData?.data || [];
 
-  // ─────────────────────────────────────────────
-  // THE FIX: Kill stale tweens → hard-reset opacity
-  // → animate → clearProps so GSAP leaves no
-  // inline style residue on any element.
-  // ─────────────────────────────────────────────
   useGSAP(() => {
     if (isLoading || !orders.length) return;
 
-    // 1. Kill any in-flight tweens targeting .order-row
     gsap.killTweensOf(".order-row");
 
-    // 2. Hard-reset ALL rows to visible so interrupted
-    //    rows are never left at opacity < 1
     gsap.set(".order-row", { opacity: 1, y: 0, clearProps: "all" });
 
-    // 3. Now animate fresh — clearProps removes inline
-    //    style once the tween finishes
     gsap.from(".order-row", {
       y: 20,
       opacity: 0,
       stagger: 0.055,
       duration: 0.65,
       ease: "expo.out",
-      clearProps: "opacity,transform", // ← crucial: clean up when done
+      clearProps: "opacity,transform",
     });
   }, { scope: container, dependencies: [isLoading, perspective, statusFilter, orders.length] });
 

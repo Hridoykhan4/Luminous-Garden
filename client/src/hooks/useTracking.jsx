@@ -1,11 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import useAxiosSecure from "./useAxiosSecure";
 
-/**
- * useTracking
- * Fetches tracking timeline for a specific order.
- * @param {string} orderId
- */
 const useTracking = (orderId) => {
     const axiosSecure = useAxiosSecure();
 
@@ -13,7 +8,7 @@ const useTracking = (orderId) => {
         queryKey: ["tracking", orderId],
         queryFn: async ({ signal }) => {
             const { data } = await axiosSecure.get(`/orders/track/${orderId}`, { signal });
-            return data.data; // returns the tracking doc
+            return data.data; 
         },
         enabled: !!orderId,
         staleTime: 1000 * 30,   // 30s — tracking should feel live

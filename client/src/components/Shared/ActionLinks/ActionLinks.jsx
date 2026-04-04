@@ -20,7 +20,7 @@ const ActionLinks = ({ role, isRoleLoading }) => {
           variant="outline"
           className="h-14 px-8 rounded-2xl font-bold border-border/60 hover:bg-secondary/50"
         >
-          <Link to="/register" className="flex items-center gap-2">
+          <Link to="/signup" className="flex items-center gap-2">
             <TbUserPlus size={20} /> Join Community
           </Link>
         </Button>

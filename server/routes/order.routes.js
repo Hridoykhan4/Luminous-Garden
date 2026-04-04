@@ -15,11 +15,6 @@ module.exports = (
   usersCollection,
   trackingCollection,
 ) => {
-  // ✅ CRITICAL: router must be created INSIDE the factory function.
-  // If declared at module scope, Express reuses the same singleton router
-  // across requires — meaning the collections closure from the first call
-  // is permanently bound, and middleware registration can be duplicated
-  // on hot reload. Always create router inside the factory.
   const router = express.Router();
 
   /* POST /orders — any logged-in user can place an order */
@@ -42,22 +37,11 @@ module.exports = (
     "/",
     verifyToken,
     verifyRole(usersCollection, ["customer", "seller", "admin"]),
-    (req, res, next) =>
-      getOrders(req, res, ordersCollection).catch(next),
+    (req, res, next) => getOrders(req, res, ordersCollection).catch(next),
   );
 
-  /*
-    IMPORTANT: /track/:orderId MUST be before /:id
-    Otherwise Express matches "track" as an order _id param
-    → ObjectId.isValid("track") = false → 400 error
-  */
-  router.get(
-    "/track/:orderId",
-    verifyToken,
-    // No verifyToken here — tracking page is accessible via public share link
-    // The controller itself checks ownership before exposing sensitive fields
-    (req, res, next) =>
-      getTracking(req, res, trackingCollection, usersCollection).catch(next),
+  router.get("/track/:orderId", verifyToken, (req, res, next) =>
+    getTracking(req, res, trackingCollection, usersCollection).catch(next),
   );
 
   /* GET /orders/:id */
@@ -65,8 +49,7 @@ module.exports = (
     "/:id",
     verifyToken,
     verifyRole(usersCollection, ["customer", "seller", "admin"]),
-    (req, res, next) =>
-      getSingleOrder(req, res, ordersCollection).catch(next),
+    (req, res, next) => getSingleOrder(req, res, ordersCollection).catch(next),
   );
 
   /* PATCH /orders/:id/status */

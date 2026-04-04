@@ -108,39 +108,41 @@ const pushTrackingEvent = async (
    GET /tracking/:orderId
    Public-ish — buyer, seller, admin only
 ───────────────────────────────────────────── */
-const getTracking = asyncHandler(async (req, res, trackingCollection, usersCollection) => {
-  const { orderId } = req.params;
+const getTracking = asyncHandler(
+  async (req, res, trackingCollection, usersCollection) => {
+    const { orderId } = req.params;
 
-  if (!ObjectId.isValid(orderId)) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Invalid order ID" });
-  }
+    if (!ObjectId.isValid(orderId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid order ID" });
+    }
 
-  const tracking = await trackingCollection.findOne({
-    orderId: new ObjectId(orderId),
-  });
+    const tracking = await trackingCollection.findOne({
+      orderId: new ObjectId(orderId),
+    });
 
-  if (!tracking) {
-    return res
-      .status(404)
-      .json({ success: false, message: "Tracking not found" });
-  }
+    if (!tracking) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Tracking not found" });
+    }
 
-  // Access check — only buyer, seller of this order, or admin
-  const email = req.user?.email;
-  const user = await usersCollection.findOne({ email: req.user.email });
-  const role = user?.role;
+    // Access check — only buyer, seller of this order, or admin
+    const email = req.user?.email;
+    const user = await usersCollection.findOne({ email: req.user.email });
+    const role = user?.role;
 
-  if (
-    role !== "admin" &&
-    tracking.customer.email !== email &&
-    tracking.seller.email !== email
-  ) {
-    return res.status(403).json({ success: false, message: "Access denied" });
-  }
+    if (
+      role !== "admin" &&
+      tracking.customer.email !== email &&
+      tracking.seller.email !== email
+    ) {
+      return res.status(403).json({ success: false, message: "Access denied" });
+    }
 
-  res.status(200).json({ success: true, data: tracking });
-});
+    res.status(200).json({ success: true, data: tracking });
+  },
+);
 
 module.exports = { createTracking, pushTrackingEvent, getTracking };

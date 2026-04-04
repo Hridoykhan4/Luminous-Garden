@@ -41,12 +41,10 @@ const createOrder = asyncHandler(
     const { plantId, quantity, customer, delivery, payment } = req.body;
 
     if (!plantId || !quantity || !customer?.phone || !delivery?.address) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Missing required fields: phone and address are required",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields: phone and address are required",
+      });
     }
     if (!ObjectId.isValid(plantId)) {
       return res
@@ -73,12 +71,10 @@ const createOrder = asyncHandler(
     );
 
     if (!plant) {
-      return res
-        .status(409)
-        .json({
-          success: false,
-          message: "Insufficient stock or plant unavailable",
-        });
+      return res.status(409).json({
+        success: false,
+        message: "Insufficient stock or plant unavailable",
+      });
     }
 
     const order = {
@@ -106,7 +102,7 @@ const createOrder = asyncHandler(
       },
       payment: {
         method: payment?.method || "cod",
-        status: "pending", // pending → paid (set when delivered for COD)
+        status: "pending",
       },
       status: "pending",
       createdAt: new Date(),
@@ -218,12 +214,10 @@ const updateOrderStatus = asyncHandler(
 
     const VALID = ["pending", "confirmed", "shipped", "delivered", "cancelled"];
     if (!VALID.includes(status)) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: `Invalid status. Must be one of: ${VALID.join(", ")}`,
-        });
+      return res.status(400).json({
+        success: false,
+        message: `Invalid status. Must be one of: ${VALID.join(", ")}`,
+      });
     }
 
     const order = await ordersCollection.findOne({ _id: new ObjectId(id) });
@@ -245,12 +239,10 @@ const updateOrderStatus = asyncHandler(
     const isAdmin = req.userRole === "admin";
 
     if (!isBuyer && !isSeller && !isAdmin) {
-      return res
-        .status(403)
-        .json({
-          success: false,
-          message: "Not authorized to update this order",
-        });
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to update this order",
+      });
     }
 
     /* Check transition is valid for this actor */
