@@ -13,6 +13,8 @@ import useAxiosSecure from "@/hooks/useAxiosSecure";
 import useOrders from "@/hooks/useOrders";
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
+import { imageUpload } from "@/api/utils";
+import useUploadProgress from "@/hooks/useUploadProgress";
 
 /* ─── helpers ─── */
 const fmt = (iso) =>
@@ -57,6 +59,7 @@ const Profile = () => {
     const { role } = useUserRole();
     const axiosSecure = useAxiosSecure();
     const pageRef = useRef(null);
+    const { uploadWithProgress } = useUploadProgress();
 
     const [editing, setEditing] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -67,7 +70,6 @@ const Profile = () => {
 
     // orders for activity
     const { data: ordersData } = useOrders({ perspective: role });
-    console.log(ordersData);
     const orders = ordersData?.data || [];
 
     const roleCfg = ROLE_CFG[role] || ROLE_CFG.customer;
@@ -95,13 +97,8 @@ const Profile = () => {
             let finalPhoto = photoURL;
 
             if (photoFile) {
-                // Upload to cloudinary via your backend or directly
-                const fd = new FormData();
-                fd.append("image", photoFile);
-                const res = await axiosSecure.post("/upload", fd, {
-                    headers: { "Content-Type": "multipart/form-data" },
-                });
-                finalPhoto = res.data.url;
+                const photoURL = await imageUpload(photoFile, uploadWithProgress);
+                finalPhoto = photoURL;
             }
 
             // Update Firebase auth profile
@@ -345,6 +342,7 @@ const Profile = () => {
 };
 
 /* ─── sub-components ─── */
+// eslint-disable-next-line no-unused-vars
 const SectionHead = ({ icon: Icon, title }) => (
     <div className="px-5 py-3.5 border-b border-border flex items-center gap-2">
         <Icon size={13} className="text-primary" />
@@ -352,6 +350,7 @@ const SectionHead = ({ icon: Icon, title }) => (
     </div>
 );
 
+// eslint-disable-next-line no-unused-vars
 const InfoField = ({ icon: Icon, label, value, locked }) => (
     <div className="flex items-center gap-3">
         <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center shrink-0">

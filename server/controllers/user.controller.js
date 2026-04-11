@@ -46,8 +46,12 @@ const syncUser = async (req, res, usersCollection) => {
 ══════════════════════════════════════════════════════ */
 const getUsers = async (req, res, usersCollection) => {
   const { role, search } = req.query;
-
+  console.log(req.user.email);
   const filter = {};
+
+  if(req.user?.email){
+    filter.email = {$ne: req.user?.email}
+  }
 
   if (role && ["customer", "seller", "admin"].includes(role)) {
     filter.role = role;

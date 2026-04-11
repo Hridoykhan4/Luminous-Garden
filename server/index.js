@@ -32,7 +32,7 @@ app.use(morgan("dev"));
 app.use(cookieParser());
 
 /* ── MongoDB ──────────────────────────────────────── */
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@${process.env.DB_URL}/?appName=Luminous-Garden`;
+const uri = process.env.VERCEL_MONGO_URI;
 
 const client = new MongoClient(uri, {
   serverApi: {
