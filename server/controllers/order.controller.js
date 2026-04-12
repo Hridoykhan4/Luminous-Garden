@@ -1,6 +1,7 @@
 const asyncHandler = require("express-async-handler");
 const { ObjectId } = require("mongodb");
 const { createTracking, pushTrackingEvent } = require("./tracking.controller");
+const { sendEmail } = require("../services/email.service");
 
 /* ─────────────────────────────────────────────
    STATUS MACHINE
@@ -59,7 +60,7 @@ const createOrder = asyncHandler(
         .json({ success: false, message: "Quantity must be at least 1" });
     }
 
-    /* Atomic: check stock AND decrement in one operation — race-condition safe */
+    // ---------------- Stock Check & Decrement ----------------
     const plant = await plantsCollection.findOneAndUpdate(
       {
         _id: new ObjectId(plantId),
@@ -77,6 +78,7 @@ const createOrder = asyncHandler(
       });
     }
 
+    // ---------------- Create Order Object ----------------
     const order = {
       plantId: new ObjectId(plantId),
       plantName: plant.name,
@@ -112,6 +114,49 @@ const createOrder = asyncHandler(
     const result = await ordersCollection.insertOne(order);
     await createTracking(trackingCollection, order, result.insertedId);
 
+    // ---------------- Send Emails ----------------
+    try {
+      // Customer Email
+      const customerSubject = `🌱 Your Order for ${order.plantName} is Confirmed!`;
+      const customerHtml = `
+        <div style="font-family: Arial, sans-serif; line-height:1.5; color:#333;">
+          <h2 style="color: #2E8B57;">Hi ${order.customer.name},</h2>
+          <p>Thank you for your order!</p>
+          <p><strong>Plant:</strong> ${order.plantName} (${order.quantity} pcs)</p>
+          <p><strong>Total Price:</strong> ${order.totalPrice} BDT</p>
+          <p><strong>Delivery Address:</strong> ${order.delivery.address}, ${order.delivery.area}</p>
+          <p>🌿 Your plants are on the way to brighten your home!</p>
+        </div>
+      `;
+      sendEmail({
+        to: order.customer.email,
+        subject: customerSubject,
+        html: customerHtml,
+      }).catch(console.error);
+
+      // Seller Email
+      const sellerSubject = `📦 New Order Received: ${order.plantName}`;
+      const sellerHtml = `
+        <div style="font-family: Arial, sans-serif; line-height:1.5; color:#333;">
+          <h2 style="color: #2E8B57;">Hello ${order.seller.name},</h2>
+          <p>You have a new order:</p>
+          <p><strong>Customer:</strong> ${order.customer.name} (${order.customer.phone})</p>
+          <p><strong>Plant:</strong> ${order.plantName} (${order.quantity} pcs)</p>
+          <p><strong>Total Price:</strong> ${order.totalPrice} BDT</p>
+          <p><strong>Delivery Address:</strong> ${order.delivery.address}, ${order.delivery.area}</p>
+          <p>🚚 Please prepare the order for shipment.</p>
+        </div>
+      `;
+      sendEmail({
+        to: order.seller.email,
+        subject: sellerSubject,
+        html: sellerHtml,
+      }).catch(console.error);
+    } catch (err) {
+      console.error("Email sending error:", err);
+    }
+
+    // ---------------- Return Response ----------------
     res.status(201).json({
       success: true,
       message: "Order placed successfully",

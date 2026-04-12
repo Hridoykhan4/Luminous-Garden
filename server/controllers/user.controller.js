@@ -1,4 +1,5 @@
 const { ObjectId } = require("mongodb");
+const { sendWelcomeEmail } = require("../services/email.service");
 
 /* ══════════════════════════════════════════════════════
    syncUser
@@ -10,33 +11,32 @@ const syncUser = async (req, res, usersCollection) => {
   if (!email)
     return res.status(400).json({ success: false, message: "Email required" });
 
+  // Check if user exists before upsert
+  const existingUser = await usersCollection.findOne({ email });
+
   const result = await usersCollection.findOneAndUpdate(
     { email },
     {
-      $set: {
-        name,
-        photo,
-        lastLoggedIn: new Date().toISOString(),
-      },
+      $set: { name, photo, lastLoggedIn: new Date().toISOString() },
       $setOnInsert: {
         role: "customer",
         status: "active",
         createdAt: new Date().toISOString(),
       },
     },
-    {
-      upsert: true,
-      returnDocument: "after", 
-    },
+    { upsert: true, returnDocument: "after" },
   );
 
-  // MongoDB Node driver v4+ returns the document directly (not result.value)
-  // Handle both old and new driver shapes safely
   const userData = result?.value ?? result;
+
+  if (!existingUser) {
+    sendWelcomeEmail(userData).catch(console.error);
+  }
 
   return res.status(200).json({
     success: true,
     role: userData?.role || "customer",
+    message: existingUser ? "User logged in" : "Welcome email sent",
   });
 };
 
@@ -49,8 +49,8 @@ const getUsers = async (req, res, usersCollection) => {
   console.log(req.user.email);
   const filter = {};
 
-  if(req.user?.email){
-    filter.email = {$ne: req.user?.email}
+  if (req.user?.email) {
+    filter.email = { $ne: req.user?.email };
   }
 
   if (role && ["customer", "seller", "admin"].includes(role)) {

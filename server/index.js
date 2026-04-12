@@ -4,7 +4,6 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const morgan = require("morgan");
 const { MongoClient, ServerApiVersion } = require("mongodb");
-
 const authRoutes = require("./routes/auth.routes");
 const userRoutes = require("./routes/user.routes");
 const plantRoutes = require("./routes/plant.routes");
@@ -15,6 +14,8 @@ const sellerRequestRoutes = require("./routes/sellerrequest.routes");
 
 const port = process.env.PORT || 5000;
 const app = express();
+
+
 
 /* ── Middleware ───────────────────────────────────── */
 app.use(

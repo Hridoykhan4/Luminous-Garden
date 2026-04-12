@@ -135,7 +135,7 @@ const ManageUsers = () => {
     const pendingCount = requests.filter(r => r.status === "pending").length;
 
     return (
-        <div ref={pageRef} className="py-6 flex flex-col gap-6">
+        <div ref={pageRef} className="py-6  flex flex-col gap-6">
 
             {/* ── HEADER + STATS ── */}
             <div className="flex flex-wrap items-start justify-between gap-4">
@@ -194,7 +194,7 @@ const ManageUsers = () => {
                 <div className="flex flex-col gap-4">
                     {/* Search + filter */}
                     <div className="flex flex-wrap gap-3">
-                        <div className="flex-1 min-w-[200px] relative">
+                        <div className="flex-1 min-w-50 relative">
                             <TbSearch size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                             <input
                                 value={search} onChange={e => setSearch(e.target.value)}
@@ -398,13 +398,13 @@ const RoleDropdown = ({ userId, currentRole, onRoleChange, isLoading }) => {
                 Role <TbChevronDown size={10} />
             </button>
             {open && (
-                <div className="absolute right-0 top-full mt-1 z-50 bg-card border border-border rounded-xl shadow-xl overflow-hidden min-w-[120px]">
+                <div className="absolute right-20 bottom-7  mt-1 z-50 bg-card border border-border rounded-xl shadow-xl overflow-hidden min-w-30">
                     {roles.map(r => {
                         const cfg = ROLE_CFG[r];
                         return (
                             <button key={r} onClick={() => { onRoleChange(userId, r); setOpen(false); }}
                                 disabled={!!isLoading(r)}
-                                className="w-full flex items-center gap-2 px-3 py-2.5 text-[11px] font-black uppercase tracking-wider hover:bg-accent transition-colors text-left">
+                                className="w-full flex items-center gap-2 px-3 py-2.5 text-[11px] font-black uppercase tracking-wider hover:bg-accent transition-colors text-left ">
                                 {isLoading(r)
                                     ? <TbLoader2 size={11} className="animate-spin" />
                                     : <span className="w-2 h-2 rounded-full shrink-0" style={{ background: cfg.color }} />
