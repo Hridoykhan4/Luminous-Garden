@@ -15,8 +15,6 @@ const sellerRequestRoutes = require("./routes/sellerrequest.routes");
 const port = process.env.PORT || 5000;
 const app = express();
 
-
-
 /* ── Middleware ───────────────────────────────────── */
 app.use(
   cors({
@@ -45,7 +43,6 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-
     const db = client.db("luminous-garden");
 
     // Collections

@@ -17,8 +17,6 @@ import {
   TbArrowLeft,
   TbStar,
   TbMapPin,
-  TbPhone,
-  TbAlertTriangle,
   TbPackage,
   TbClock,
 } from "react-icons/tb";

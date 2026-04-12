@@ -11,8 +11,6 @@ import {
 } from "react-icons/tb";
 import useAuth from "@/hooks/useAuth";
 import useUserRole from "@/hooks/useUserRole";
-import LuminousLogo from "../LuminousLogo/LuminousLogo";
-
 gsap.registerPlugin(ScrollTrigger);
 
 /* ─────────────────────────────────────────────
