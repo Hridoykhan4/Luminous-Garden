@@ -62,7 +62,7 @@ const STATUS_CFG = {
     cancelled: {
         label: "Cancelled",
         shortLabel: "Cancelled",
-        color: "oklch(0.52 0.18 25)",
+        color: "oklch(0.52 0.18 27)",
         bg: "oklch(0.52 0.18 25 / 0.10)",
         ring: "oklch(0.52 0.18 25 / 0.25)",
         icon: TbX,

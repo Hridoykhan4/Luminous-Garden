@@ -1,1 +1,1 @@
-Starting an online e-commerce plant store 
+Ready to Update

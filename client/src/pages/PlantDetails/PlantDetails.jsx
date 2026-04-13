@@ -26,7 +26,6 @@ import LuminousButton from "@/components/Shared/LuminousButton/LuminousButton";
 import LoadingSpinner from "@/components/Shared/LoadingSpinner/LoadingSpinner";
 import useSinglePlant from "@/hooks/useSinglePlant";
 import OrderModal from "@/components/Shared/OrderModal/OrderModal";
-import { cn } from "@/lib/utils";
 
 /* ─────────────────────────────────────────────
    CONSTANTS
