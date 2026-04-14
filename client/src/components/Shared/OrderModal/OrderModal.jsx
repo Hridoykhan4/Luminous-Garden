@@ -1,6 +1,7 @@
 /* eslint-disable no-unused-vars */
 import { useState, useRef, useEffect, useMemo, forwardRef } from "react";
 import { useForm, Controller } from "react-hook-form";
+import useStartStripeCheckout from "@/hooks/useStartStripeCheckout";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useGSAP } from "@gsap/react";
@@ -74,14 +75,62 @@ const PAYMENT_METHODS = [
    MAIN COMPONENT
 ───────────────────────────────────────────── */
 const OrderModal = ({ plant, quantity, onClose, user }) => {
+  const [showStripeModal, setShowStripeModal] = useState(false);
+  const [stripePayload, setStripePayload] = useState(null);
   const sheetRef = useRef(null);
   const backdropRef = useRef(null);
   const totalPrice = (plant.price * quantity).toLocaleString();
+
+  const handleStripeCheckout = async () => {
+    try {
+      if (!stripePayload) return;
+
+      const res = await startStripeCheckout(stripePayload);
+      console.log(res);
+
+      if (res?.url) {
+        window.location.href = res.url;
+      }
+    } catch {
+      //
+    }
+  };
 
   const [step, setStep] = useState(0);
   const [done, setDone] = useState(false);
   const [orderId, setOrderId] = useState(null);
   const [confirmClose, setConfirmClose] = useState(false);
+
+  const { mutateAsync: startStripeCheckout, isPending: stripePending } =
+    useStartStripeCheckout();
+
+  const buildOrderPayload = (data) => {
+    const coverEntry = coverageData.find((e) => e.district === data.district);
+
+    return {
+      plantId: plant._id,
+      quantity,
+      customer: {
+        name: data.name,
+        phone: data.phone,
+        email: user?.email || "",
+        photo: user?.photoURL || "",
+      },
+      delivery: {
+        address: [data.house, data.area, data.district]
+          .filter(Boolean)
+          .join(", "),
+        area: data.area,
+        district: data.district,
+        region: data.region,
+        coords: coverEntry?.coords || null,
+        note: data.note || "",
+      },
+      payment: {
+        method: data.payment,
+      },
+    };
+  };
 
   /* Persist data across steps so going Back doesn't lose state */
   const [saved, setSaved] = useState({
@@ -179,31 +228,42 @@ const OrderModal = ({ plant, quantity, onClose, user }) => {
 
   const placeOrderNow = async (data) => {
     try {
-      const coverEntry = coverageData.find(e => e.district === data.district);
-      const result = await placeOrder({
-        plantId: plant._id,
-        quantity,
-        customer: { name: data.name, phone: data.phone, photo: user?.photoURL || "" },
-        delivery: {
-          address: [data.house, data.area, data.district].filter(Boolean).join(", "),
-          area: data.area,
-          district: data.district,
-          region: data.region,
-          coords: coverEntry?.coords || null,
-          note: data.note || "",
-        },
-        payment: { method: data.payment },
-      });
+      const payload = buildOrderPayload(data);
+
+      if (data.payment === "stripe") {
+        setStripePayload(payload);
+        setShowStripeModal(true);
+        return;
+      }
+
+      const result = await placeOrder(payload);
+
       setOrderId(result.orderId);
+
       gsap.to(".om-step", {
-        opacity: 0, y: -8, duration: 0.18,
+        opacity: 0,
+        y: -8,
+        duration: 0.18,
         onComplete: () => setDone(true),
       });
-    } catch { /* handled by hook toast */ }
+    } catch {
+      // handled by hook toast
+    }
   };
 
   return (
     <>
+      {showStripeModal && (
+        <StripeCheckoutModal
+          open={showStripeModal}
+          onClose={() => setShowStripeModal(false)}
+          onConfirm={handleStripeCheckout}
+          loading={stripePending}
+          payload={stripePayload}
+          plant={plant}
+          quantity={quantity}
+        />
+      )}
       {/* ── Backdrop ── */}
       <div
         ref={backdropRef}
@@ -552,15 +612,15 @@ const OrderModal = ({ plant, quantity, onClose, user }) => {
               <button
                 type="submit"
                 form="om-form"
-                disabled={submitting}
+                disabled={submitting || stripePending}
                 className="flex-1 h-12 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all duration-150"
                 style={{
                   background: "var(--primary)",
                   color: "var(--primary-foreground)",
                   border: "none",
                   boxShadow: "0 4px 20px oklch(0.45 0.12 160 / 0.28)",
-                  opacity: submitting ? 0.75 : 1,
-                  cursor: submitting ? "not-allowed" : "pointer",
+                  opacity: submitting || stripePending ? 0.75 : 1,
+                  cursor: submitting || stripePending ? "not-allowed" : "pointer",
                 }}
               >
                 {submitting ? (
@@ -860,5 +920,133 @@ const SuccessView = ({ plant, quantity, saved, totalPrice, orderId }) => (
     </div>
   </div>
 );
+
+const StripeCheckoutModal = ({
+  open,
+  onClose,
+  onConfirm,
+  loading,
+  payload,
+  plant,
+  quantity,
+}) => {
+  if (!open || !payload) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-9600 flex items-center justify-center px-5"
+      style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)" }}
+    >
+      <div
+        className="w-full max-w-md rounded-3xl p-6"
+        style={{
+          background: "var(--card)",
+          border: "1px solid var(--border)",
+          boxShadow: "0 24px 64px rgba(0,0,0,0.22)",
+        }}
+      >
+        <div className="mb-5">
+          <p className="text-detail mb-2">Secure Card Checkout</p>
+          <h3
+            className="text-lg font-black text-foreground"
+            style={{ fontFamily: "'Georgia', serif" }}
+          >
+            Continue to Stripe
+          </h3>
+          <p className="mt-2 text-sm font-medium leading-relaxed text-muted-foreground">
+            You will be redirected to Stripe&apos;s secure payment page to complete
+            your card payment.
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-secondary p-4">
+          <div className="mb-3 flex items-center gap-3">
+            <img
+              src={plant.image}
+              alt={plant.name}
+              className="h-14 w-14 rounded-xl border border-border object-cover"
+            />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-black text-foreground">
+                {plant.name}
+              </p>
+              <p className="text-xs font-medium text-muted-foreground">
+                {quantity} unit{quantity > 1 ? "s" : ""}
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="font-medium text-muted-foreground">Customer</span>
+              <span className="font-bold text-foreground">
+                {payload.customer?.name}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="font-medium text-muted-foreground">Phone</span>
+              <span className="font-bold text-foreground">
+                {payload.customer?.phone}
+              </span>
+            </div>
+
+            <div className="flex items-start justify-between gap-4">
+              <span className="font-medium text-muted-foreground">Address</span>
+              <span className="text-right font-bold text-foreground">
+                {payload.delivery?.address}
+              </span>
+            </div>
+
+            <div className="my-2 h-px bg-border" />
+
+            <div className="flex items-center justify-between">
+              <span className="font-medium text-muted-foreground">Payment</span>
+              <span className="font-bold capitalize text-foreground">
+                {payload.payment?.method}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="font-medium text-muted-foreground">Total</span>
+              <span
+                className="text-base font-black text-foreground"
+                style={{ fontFamily: "'Georgia', serif" }}
+              >
+                ৳{(plant.price * quantity).toLocaleString()}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-5 flex gap-2.5">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            className="flex-1 h-11 rounded-xl border border-border bg-accent text-sm font-bold text-foreground transition-all hover:bg-secondary"
+          >
+            Back
+          </button>
+
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={loading}
+            className="flex-1 h-11 rounded-xl text-sm font-black transition-all"
+            style={{
+              background: "var(--primary)",
+              color: "var(--primary-foreground)",
+              border: "none",
+              opacity: loading ? 0.7 : 1,
+            }}
+          >
+            {loading ? "Redirecting..." : "Pay with Card"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default OrderModal;

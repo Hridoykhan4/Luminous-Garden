@@ -7,13 +7,15 @@ const { MongoClient, ServerApiVersion } = require("mongodb");
 
 const authRoutes = require("./routes/auth.routes");
 const userRoutes = require("./routes/user.routes");
-const plantRoutes = require("./routes/plant.routes");
 const orderRoutes = require("./routes/order.routes");
 const sellerRequestRoutes = require("./routes/sellerrequest.routes");
 
 
 const globalErrorHandler = require("./middlewares/error.middleware");
 const adminStateRoutes = require("./routes/adminState.routes");
+const paymentRoutes = require("./routes/payment.routes");
+const plantRoutes = require("./routes/plant.routes");
+
 
 const port = process.env.PORT || 5000;
 const app = express();
@@ -82,6 +84,10 @@ async function run() {
         trackingCollection,
         sellerRequestsCollection,
       ),
+    );
+    app.use(
+      "/payments",
+      paymentRoutes(plantsCollection, ordersCollection, trackingCollection),
     );
 
     console.log("✅ Database connected & all routes initialized");

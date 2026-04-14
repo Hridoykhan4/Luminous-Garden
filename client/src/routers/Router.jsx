@@ -1,28 +1,28 @@
 import { lazy, Suspense } from "react";
-import { createBrowserRouter, Navigate } from "react-router";
+import { createBrowserRouter } from "react-router";
 
-// --- Layouts ---
+// Layouts
 import MainLayout from "../layouts/MainLayout";
 import DashboardLayout from "../layouts/DashboardLayout";
 
-// --- Components & Guards ---
+// Guards
 import PrivateRoute from "./PrivateRoute";
 import SellerRoute from "./SellerRoute";
 import AdminRoute from "./AdminRoute";
+import UserRoute from "./UserRoute";
+
+// Shared
 import LoadingSpinner from "@/components/Shared/LoadingSpinner/LoadingSpinner";
 import ErrorPage from "../pages/ErrorPage/ErrorPage";
 import Forbidden from "@/pages/Forbidden/Forbidden";
-import UserRoute from "./UserRoute";
 
-// --- 1. Lazy Loading ---
+// Loadable helper
 // eslint-disable-next-line no-unused-vars
 const Loadable = (Component) => (props) => (
   <Suspense fallback={<LoadingSpinner />}>
     <Component {...props} />
   </Suspense>
 );
-
-// --- 2. Lazy Imports ---
 
 // Public Pages
 const Home = Loadable(lazy(() => import("../pages/Home/Home")));
@@ -34,6 +34,12 @@ const OrderTracking = Loadable(
   lazy(() => import("../pages/OrderTracking/OrderTracking")),
 );
 const About = Loadable(lazy(() => import("../pages/About/About")));
+const CheckoutSuccess = Loadable(
+  lazy(() => import("../pages/Checkout/CheckoutSuccess")),
+);
+const CheckoutCancel = Loadable(
+  lazy(() => import("../pages/Checkout/CheckoutCancel")),
+);
 
 // Auth Pages
 const Login = Loadable(lazy(() => import("../pages/Login/Login")));
@@ -50,10 +56,10 @@ const MyOrders = Loadable(
   lazy(() => import("../pages/Dashboard/Common/MyOrders")),
 );
 
-
-// Customer Pages
-const BeSeller = Loadable(lazy(() => import('../pages/Dashboard/Customer/BeSeller')))
-
+// Dashboard: Customer
+const BeSeller = Loadable(
+  lazy(() => import("../pages/Dashboard/Customer/BeSeller")),
+);
 
 // Dashboard: Seller
 const AddPlant = Loadable(
@@ -62,7 +68,6 @@ const AddPlant = Loadable(
 const MyInventory = Loadable(
   lazy(() => import("../pages/Dashboard/Seller/MyInventory")),
 );
-
 const UpdatePlant = Loadable(
   lazy(() => import("../pages/Dashboard/Seller/UpdatePlant")),
 );
@@ -75,7 +80,6 @@ const AllOrders = Loadable(
   lazy(() => import("../pages/Dashboard/Admin/AllOrders")),
 );
 
-//  Router Configuration
 const Router = createBrowserRouter([
   {
     path: "/",
@@ -86,15 +90,19 @@ const Router = createBrowserRouter([
       { path: "plants", element: <Plants /> },
       { path: "plants/:id", element: <PlantDetails /> },
       { path: "about", element: <About /> },
-      { path: "orders/track/:orderId", element: <OrderTracking /> }
+      { path: "orders/track/:orderId", element: <OrderTracking /> },
+
+      // Stripe return pages — keep public
+      { path: "checkout/success", element: <CheckoutSuccess /> },
+      { path: "checkout/cancel", element: <CheckoutCancel /> },
     ],
   },
 
-  // Auth Routes
+  // Public auth routes
   { path: "/login", element: <Login /> },
   { path: "/signup", element: <SignUp /> },
 
-  // --- Dashboard Structure ---
+  // Protected dashboard
   {
     path: "/dashboard",
     element: (
@@ -103,33 +111,27 @@ const Router = createBrowserRouter([
       </PrivateRoute>
     ),
     children: [
-      // 🟢 Common Routes
+      // Common
       { index: true, element: <Statistics /> },
       { path: "profile", element: <Profile /> },
       { path: "my-orders", element: <MyOrders /> },
 
-      // Customer Routes
+      // Customer
       {
-        path: 'be-seller',
-        element: <UserRoute>
-          <BeSeller></BeSeller>
-        </UserRoute>
+        path: "be-seller",
+        element: (
+          <UserRoute>
+            <BeSeller />
+          </UserRoute>
+        ),
       },
 
-      // 🟡 Seller Routes
+      // Seller
       {
         path: "add-plant",
         element: (
           <SellerRoute>
             <AddPlant />
-          </SellerRoute>
-        ),
-      },
-      {
-        path: "/dashboard/update-plant/:id",
-        element: (
-          <SellerRoute>
-            <UpdatePlant />
           </SellerRoute>
         ),
       },
@@ -141,8 +143,16 @@ const Router = createBrowserRouter([
           </SellerRoute>
         ),
       },
+      {
+        path: "update-plant/:id",
+        element: (
+          <SellerRoute>
+            <UpdatePlant />
+          </SellerRoute>
+        ),
+      },
 
-      // 🔴 Admin Routes
+      // Admin
       {
         path: "manage-users",
         element: (
@@ -163,7 +173,7 @@ const Router = createBrowserRouter([
   },
 
   { path: "/forbidden", element: <Forbidden /> },
-  { path: "*", element: <ErrorPage></ErrorPage> },
+  { path: "*", element: <ErrorPage /> },
 ]);
 
 export default Router;
