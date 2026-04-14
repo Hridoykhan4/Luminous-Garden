@@ -18,15 +18,13 @@ import { useGSAP } from "@gsap/react";
 import LuminousLogo from "../components/Shared/LuminousLogo/LuminousLogo";
 import useUserRole from "@/hooks/useUserRole";
 import useAuth from "@/hooks/useAuth";
+import { FcStatistics } from "react-icons/fc";
 
 /* ─────────────────────────────────────────
    NAV CONFIG (DRY + SCALABLE)
 ───────────────────────────────────────── */
 const NAV_CONFIG = {
-  common: [
-    { label: "Overview", to: "/dashboard", icon: TbLayoutDashboard },
-    { label: "Profile", to: "/dashboard/profile", icon: MdAccountCircle },
-  ],
+
   customer: [
     { label: "My Orders", to: "/dashboard/my-orders", icon: MdReceiptLong },
     { label: "Become a Seller", to: "/dashboard/be-seller", icon: MdStorefront },
@@ -42,10 +40,18 @@ const NAV_CONFIG = {
   ],
   admin: [
     {
+      label: "Statistics",
+      to: "/dashboard",
+      icon: FcStatistics,
+    },
+    {
       label: "User Registry",
       to: "/dashboard/manage-users",
       icon: MdManageAccounts,
     },
+  ],
+  common: [
+    { label: "Profile", to: "/dashboard/profile", icon: MdAccountCircle },
   ],
 };
 
@@ -80,10 +86,10 @@ const DashboardLayout = () => {
 
     const base = NAV_CONFIG.common;
 
-    if (role === "admin") return [...base, ...NAV_CONFIG.admin];
+    if (role === "admin") return [...NAV_CONFIG.admin, ...base];
     if (role === "seller") return [...base, ...NAV_CONFIG.seller];
 
-    return [...base, ...NAV_CONFIG.customer];
+    return [...NAV_CONFIG.customer, ...base];
   }, [role, isRoleLoading]);
 
   /* ─────────────────────────────────────────
