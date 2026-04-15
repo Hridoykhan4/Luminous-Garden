@@ -121,7 +121,7 @@ const StatCard = ({ title, value, subtitle, icon, gradient }) => (
             </div>
 
             <div
-                className={`grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br shadow-lg ${gradient}`}
+                className={`grid h-14 w-14 place-items-center rounded-2xl bg-linear-to-br shadow-lg ${gradient}`}
             >
                 {icon}
             </div>
@@ -304,7 +304,7 @@ const AdminStatistics = () => {
                         </div>
                     </div>
 
-                    <div className="h-[360px] min-w-0 w-full">
+                    <div className="h-90 min-w-0 w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={chartData}>
                                 <defs>
@@ -366,7 +366,7 @@ const AdminStatistics = () => {
                         <BsGraphUpArrow className="h-5 w-5 text-primary" />
                     </div>
 
-                    <div className="h-[280px] min-w-0 w-full">
+                    <div className="h-70 min-w-0 w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
@@ -420,7 +420,7 @@ const AdminStatistics = () => {
                         </p>
                     </div>
 
-                    <div className="h-[360px] min-w-0 w-full">
+                    <div className="h-90 min-w-0 w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={chartData}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -473,7 +473,7 @@ const AdminStatistics = () => {
                         </p>
                     </div>
 
-                    <div className="h-[240px] min-w-0 w-full">
+                    <div className="h-60 min-w-0 w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
@@ -654,7 +654,7 @@ const AdminStatistics = () => {
                     </p>
                 </div>
 
-                <div className="h-[340px] min-w-0 w-full">
+                <div className="h-85 min-w-0 w-full">
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={chartData}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />

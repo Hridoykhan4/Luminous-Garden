@@ -10,12 +10,10 @@ const userRoutes = require("./routes/user.routes");
 const orderRoutes = require("./routes/order.routes");
 const sellerRequestRoutes = require("./routes/sellerrequest.routes");
 
-
 const globalErrorHandler = require("./middlewares/error.middleware");
 const adminStateRoutes = require("./routes/adminState.routes");
 const paymentRoutes = require("./routes/payment.routes");
 const plantRoutes = require("./routes/plant.routes");
-
 
 const port = process.env.PORT || 5000;
 const app = express();
@@ -49,8 +47,6 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    await client.connect();
-
     const db = client.db("luminous-garden");
 
     const usersCollection = db.collection("users");
