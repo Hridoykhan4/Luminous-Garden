@@ -1,7 +1,6 @@
 /* eslint-disable no-unused-vars */
 import { useRef, useState } from "react";
 import { Link } from "react-router";
-import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import {
@@ -26,7 +25,7 @@ const EXPLORE_LINKS = [
 
 const COMPANY_LINKS = [
     { label: "About Us", to: "/about" },
-    { label: "How It Works", to: "/explore" },
+    // { label: "How It Works", to: "/explore" },
 ];
 
 // Role-aware links injected at runtime — see footer body
@@ -64,18 +63,6 @@ const Footer = () => {
     const footerRef = useRef(null);
     const [email, setEmail] = useState("");
     const [subDone, setSubDone] = useState(false);
-
-    /* ── Entrance animation ── */
-    useGSAP(() => {
-        gsap.from(".ft-col", {
-            y: 36, opacity: 0, stagger: 0.1, duration: 0.9, ease: "expo.out",
-            scrollTrigger: { trigger: footerRef.current, start: "top 92%", once: true },
-        });
-        gsap.from(".ft-bottom", {
-            y: 14, opacity: 0, duration: 0.7, ease: "expo.out",
-            scrollTrigger: { trigger: ".ft-bottom", start: "top 98%", once: true },
-        });
-    }, { scope: footerRef });
 
     /* ── Role-aware account links ── */
     const accountLinks = user
