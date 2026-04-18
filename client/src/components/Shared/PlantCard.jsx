@@ -15,9 +15,7 @@ import useAuth from "@/hooks/useAuth";
 import useAxiosSecure from "@/hooks/useAxiosSecure";
 import toast from "react-hot-toast";
 
-/* ─────────────────────────────────────────────
-   ACCENT MAP  (light-mode-safe, dark-mode-safe)
-───────────────────────────────────────────── */
+
 const ACCENT = {
   Indoor: {
     color: "oklch(0.42 0.10 220)",
@@ -107,9 +105,6 @@ const PlantCard = ({ plant, refetch, view = "grid" }) => {
     }
   };
 
-  /* ════════════════════════════════
-     LIST VIEW — fully responsive
-  ════════════════════════════════ */
   if (view === "list") {
     return (
       <div
@@ -342,9 +337,6 @@ const PlantCard = ({ plant, refetch, view = "grid" }) => {
     );
   }
 
-  /* ════════════════════════════════
-     GRID VIEW
-  ════════════════════════════════ */
   return (
     <div
       ref={cardRef}
