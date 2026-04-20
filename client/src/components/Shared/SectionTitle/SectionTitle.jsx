@@ -9,7 +9,6 @@ const SectionTitle = ({ heading, subheading }) => {
   const container = useRef(null);
 
   useGSAP(() => {
-    /* Guarantee visible first — never leave content invisible */
     gsap.set([".st-heading", ".st-accent", ".st-sub"], { clearProps: "all" });
 
     ScrollTrigger.create({

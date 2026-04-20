@@ -112,11 +112,8 @@ const Footer = () => {
 
             {/* ── MAIN FOOTER BODY ─────────────────────────── */}
             <div
-                className="bg-primary/10 "
-            // style={{
-            //     background: "linear-gradient(170deg, oklch(0.10 0.025 160) 0%, oklch(0.13 0.02 160) 100%)",
-            //     borderTop: "1px solid oklch(0.28 0.03 160 / 0.5)",
-            // }}
+                className="bg-primary/10"
+
             >
                 <div className="container-page section-spacing">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1.6fr] gap-10 lg:gap-12">

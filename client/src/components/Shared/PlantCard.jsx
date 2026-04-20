@@ -224,7 +224,7 @@ const PlantCard = ({ plant, refetch, view = "grid" }) => {
             >
               {plant.category}
             </span>
-            {isOutOfStock && !isFlagged && (
+            {isOutOfStock && !isFlagged && ( 
               <span
                 style={{
                   fontSize: 9,
@@ -488,7 +488,7 @@ const PlantCard = ({ plant, refetch, view = "grid" }) => {
               backdropFilter: "blur(1.5px)",
             }}
           >
-            <div
+            <div                  
               style={{
                 display: "flex",
                 alignItems: "center",

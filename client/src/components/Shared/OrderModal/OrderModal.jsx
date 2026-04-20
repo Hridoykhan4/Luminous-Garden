@@ -160,6 +160,10 @@ export default function OrderModal({ plant, quantity, onClose, user }) {
       setStripeReview(true);
       return;
     }
+    if(data.payment === 'bkash') {
+      console.log(payload);
+      return
+    }
     try {
       const res = await placeOrder(payload);
       setOrderId(res.orderId);
