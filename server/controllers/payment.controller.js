@@ -5,6 +5,11 @@ const Stripe = require("stripe");
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const MIN_STRIPE_BDT = 70;
 
+const createSSLInitialize = ({ plantsCollection }) => {
+  const { plantId, quantity, customer, delivery, payment } = req.body;
+  console.log(req.body);
+};
+
 const createStripeCheckoutSession = ({ plantsCollection }) =>
   asyncHandler(async (req, res) => {
     if (!plantsCollection) {
@@ -290,4 +295,5 @@ const finalizeStripeOrder = ({
 module.exports = {
   createStripeCheckoutSession,
   finalizeStripeOrder,
+  createSSLInitialize,
 };

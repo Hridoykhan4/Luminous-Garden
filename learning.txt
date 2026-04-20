@@ -154,3 +154,8 @@ Type Safety: If you use TypeScript, it automatically knows exactly what your dat
         "date": "2024-08-20T07:30:00.000Z"
     }
 ]
+
+
+Steps for payment Initiate
+Initiate Payment
+POST request  https://sandbox.sslcommerz.com/gwprocess/v4/api.php

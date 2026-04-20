@@ -15,6 +15,7 @@ import {
 import useCreateOrder from "@/hooks/useCreateOrder";
 import useStartStripeCheckout from "@/hooks/useStartStripeCheckout";
 import coverageData, { REGIONS } from "@/utils/Coveragedata";
+import useStartSSLCheckout from "@/hooks/useStartSSLCheckout";
 
 /* ─── Schemas ─── */
 const BD_PHONE = /^(?:\+?88)?01[3-9]\d{8}$/;
@@ -94,6 +95,7 @@ export default function OrderModal({ plant, quantity, onClose, user }) {
 
   const { mutateAsync: placeOrder, isPending: placing } = useCreateOrder();
   const { mutateAsync: startStripe, isPending: stripeLoad } = useStartStripeCheckout();
+  const {mutateAsync: startSSL} = useStartSSLCheckout()
 
   useGSAP(() => {
     gsap.fromTo(backdropRef.current, { opacity: 0 }, { opacity: 1, duration: 0.25 });
@@ -161,7 +163,8 @@ export default function OrderModal({ plant, quantity, onClose, user }) {
       return;
     }
     if(data.payment === 'bkash') {
-      console.log(payload);
+      const res = await startSSL(payload);
+      console.log(res);
       return
     }
     try {
