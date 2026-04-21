@@ -164,7 +164,9 @@ export default function OrderModal({ plant, quantity, onClose, user }) {
     }
     if(data.payment === 'bkash') {
       const res = await startSSL(payload);
-      console.log(res);
+      if(res?.url) {
+        window.location.replace(res.url)
+      }
       return
     }
     try {

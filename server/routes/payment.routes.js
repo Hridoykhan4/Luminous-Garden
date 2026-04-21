@@ -3,6 +3,7 @@ const {
   createStripeCheckoutSession,
   finalizeStripeOrder,
   createSSLInitialize,
+  successPayment,
 } = require("../controllers/payment.controller");
 
 module.exports = (plantsCollection, ordersCollection, trackingCollection) => {
@@ -13,9 +14,9 @@ module.exports = (plantsCollection, ordersCollection, trackingCollection) => {
     createStripeCheckoutSession({ plantsCollection }),
   );
 
-  router.post('/create-ssl-payment', async(req,res) => {
-    createSSLInitialize({plantsCollection})
-  })
+  router.post('/success-payment', successPayment())
+
+  router.post("/create-ssl-payment", createSSLInitialize({ plantsCollection }));
 
   router.post(
     "/stripe/finalize",
