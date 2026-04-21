@@ -55,6 +55,8 @@ async function run() {
     const ordersCollection = db.collection("orders");
     const trackingCollection = db.collection("tracking");
     const sellerRequestsCollection = db.collection("sellerRequests");
+    const sslPaymentsCollection = db.collection("sslPayments");
+
 
     app.use("/users", userRoutes(usersCollection));
     app.use("/auth", authRoutes);
@@ -84,7 +86,12 @@ async function run() {
     );
     app.use(
       "/payments",
-      paymentRoutes(plantsCollection, ordersCollection, trackingCollection),
+      paymentRoutes(
+        plantsCollection,
+        ordersCollection,
+        trackingCollection,
+        sslPaymentsCollection,
+      ),
     );
 
     console.log("✅ Database connected & all routes initialized");

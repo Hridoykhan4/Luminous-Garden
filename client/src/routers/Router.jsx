@@ -41,6 +41,18 @@ const CheckoutCancel = Loadable(
   lazy(() => import("../pages/Checkout/CheckoutCancel")),
 );
 
+
+const CheckoutSSLSuccess = Loadable(
+  lazy(() => import("../pages/Checkout/CheckoutSSLSuccess")),
+);
+const CheckoutSSLFail = Loadable(
+  lazy(() => import("../pages/Checkout/CheckoutSSLFail")),
+);
+const CheckoutSSLCancel = Loadable(
+  lazy(() => import("../pages/Checkout/CheckoutSSLCancel")),
+);
+
+
 // Auth Pages
 const Login = Loadable(lazy(() => import("../pages/Login/Login")));
 const SignUp = Loadable(lazy(() => import("../pages/SignUp/SignUp")));
@@ -92,9 +104,15 @@ const Router = createBrowserRouter([
       { path: "about", element: <About /> },
       { path: "orders/track/:orderId", element: <OrderTracking /> },
 
-      // Stripe return pages — keep public
+      // Stripe return pages — 
       { path: "checkout/success", element: <CheckoutSuccess /> },
       { path: "checkout/cancel", element: <CheckoutCancel /> },
+
+
+      // SSL COMMERZE return pages 
+      { path: "checkout/ssl/success", element: <CheckoutSSLSuccess /> },
+      { path: "checkout/ssl/fail", element: <CheckoutSSLFail /> },
+      { path: "checkout/ssl/cancel", element: <CheckoutSSLCancel /> },
     ],
   },
 

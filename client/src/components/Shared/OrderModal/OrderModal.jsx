@@ -16,6 +16,7 @@ import useCreateOrder from "@/hooks/useCreateOrder";
 import useStartStripeCheckout from "@/hooks/useStartStripeCheckout";
 import coverageData, { REGIONS } from "@/utils/Coveragedata";
 import useStartSSLCheckout from "@/hooks/useStartSSLCheckout";
+import { FaExpeditedssl } from "react-icons/fa";
 
 /* ─── Schemas ─── */
 const BD_PHONE = /^(?:\+?88)?01[3-9]\d{8}$/;
@@ -32,7 +33,7 @@ const SCHEMAS = [
     note: z.string().optional(),
   }),
   z.object({
-    payment: z.enum(["cod", "stripe", "bkash"]),
+    payment: z.enum(["cod", "stripe", "sslcommerz"]),
   }),
 ];
 
@@ -42,8 +43,8 @@ const PAYMENTS = [
   { id: "cod", label: "Cash on Delivery", sub: "Pay when your plant arrives", icon: TbCash, badge: "Recommended" },
   { id: "stripe", label: "Card Payment", sub: "Visa · Mastercard · AMEX", icon: TbCreditCard, badge: null },
   {
-    id: "bkash", label: "bKash", sub: "Mobile banking — fast & secure",
-    icon: () => <span style={{ fontWeight: 900, color: "#E2136E", fontSize: 13, letterSpacing: "0.02em" }}>bKash</span>,
+    id: "sslcommerz", label: "SSLCommerz", sub: "bKash · Nagad · Rocket · Cards · Bank",
+    icon: FaExpeditedssl,
     badge: null,
   },
 ];
@@ -95,7 +96,7 @@ export default function OrderModal({ plant, quantity, onClose, user }) {
 
   const { mutateAsync: placeOrder, isPending: placing } = useCreateOrder();
   const { mutateAsync: startStripe, isPending: stripeLoad } = useStartStripeCheckout();
-  const {mutateAsync: startSSL} = useStartSSLCheckout()
+  const { mutateAsync: startSSL } = useStartSSLCheckout()
 
   useGSAP(() => {
     gsap.fromTo(backdropRef.current, { opacity: 0 }, { opacity: 1, duration: 0.25 });
@@ -162,18 +163,19 @@ export default function OrderModal({ plant, quantity, onClose, user }) {
       setStripeReview(true);
       return;
     }
-    if(data.payment === 'bkash') {
+    if (data.payment === "sslcommerz") {
       const res = await startSSL(payload);
-      if(res?.url) {
-        window.location.replace(res.url)
+      if (res?.url) {
+        window.location.href = res.url;
       }
-      return
+      return;
     }
+    
     try {
       const res = await placeOrder(payload);
       setOrderId(res.orderId);
       gsap.to(".om-slide", { opacity: 0, y: -8, duration: 0.18, onComplete: () => setDone(true) });
-    } catch { 
+    } catch {
 
       //
     }
@@ -183,7 +185,7 @@ export default function OrderModal({ plant, quantity, onClose, user }) {
     try {
       const res = await startStripe(finalPayload);
       if (res?.url) window.location.href = res.url;
-    } catch { 
+    } catch {
 
       //
     }
@@ -594,13 +596,16 @@ function SuccessView({ plant, quantity, saved, totalPrice, orderId }) {
         <p className="text-sm text-muted-foreground font-medium leading-relaxed max-w-xs">
           {quantity} specimen{quantity > 1 ? "s" : ""} of <strong className="text-foreground">{plant.name}</strong> heading to{" "}
           <strong className="text-foreground">{saved.area || saved.district}</strong>.
-          {saved.payment === "cod" ? " Pay cash on arrival." : ""}
+          {saved.payment === "cod" ? "Cash on Delivery"
+            : saved.payment === "stripe"
+              ? "Card"
+              : "SSLCommerz"}
         </p>
       </div>
       <div className="w-full rounded-2xl bg-secondary border border-border overflow-hidden">
         <div className="px-4 py-3 flex flex-col gap-1.5">
           <SR l={`${quantity}× ${plant.name}`} v={`৳${totalPrice}`} />
-          <SR l="Payment" v={saved.payment === "cod" ? "Cash on Delivery" : saved.payment === "stripe" ? "Card" : "bKash"} />
+          <SR l="Payment" v={saved.payment === "cod" ? "Cash on Delivery" : saved.payment === "stripe" ? "Card" : "SSLCommerz"} />
           <SR l="Delivery fee" v="Free" green />
           <div className="h-px bg-border my-1" />
           <SR l="Total" v={`৳${totalPrice}`} bold />

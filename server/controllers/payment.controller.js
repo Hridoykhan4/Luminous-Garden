@@ -4,6 +4,7 @@ const Stripe = require("stripe");
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const MIN_STRIPE_BDT = 70;
+const VALID_SSL_STATUSES = new Set(["VALID", "VALIDATED"]);
 
 const generateTransactionID = () => {
   const prefix = "TXN";
@@ -13,7 +14,24 @@ const generateTransactionID = () => {
   return `${prefix}-${timestamp}-${randomPart}`.toUpperCase();
 };
 
-const createSSLInitialize = ({ plantsCollection }) =>
+const validateSSLPayment = async (valId) => {
+  const base =
+    process.env.SSL_ENV === "live"
+      ? "https://securepay.sslcommerz.com"
+      : "https://sandbox.sslcommerz.com";
+
+  const url =
+    `${base}/validator/api/validationserverAPI.php` +
+    `?val_id=${encodeURIComponent(valId)}` +
+    `&store_id=${encodeURIComponent(process.env.SSL_store_id)}` +
+    `&store_passwd=${encodeURIComponent(process.env.SSL_store_passwd)}` +
+    `&v=1&format=json`;
+
+  const response = await fetch(url);
+  return response.json();
+};
+
+const createSSLInitialize = ({ plantsCollection, sslPaymentsCollection }) =>
   asyncHandler(async (req, res) => {
     const { plantId, quantity, customer, delivery, payment } = req.body;
     if (!plantId || !quantity) {
@@ -22,10 +40,17 @@ const createSSLInitialize = ({ plantsCollection }) =>
         message: "Plant ID and quantity are required",
       });
     }
-    if (payment?.method !== "bkash") {
+    if (payment?.method !== "sslcommerz") {
       return res.status(400).json({
         success: false,
         message: "Invalid payment method for Stripe checkout",
+      });
+    }
+
+    if (!ObjectId.isValid(plantId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid plant ID",
       });
     }
 
@@ -62,16 +87,51 @@ const createSSLInitialize = ({ plantsCollection }) =>
 
     const transactionId = generateTransactionID();
 
+    await sslPaymentsCollection.insertOne({
+      tranId: transactionId,
+      plantId: String(plant._id),
+      quantity: qty,
+      amount: totalAmountBdt,
+      customer: {
+        name: customer?.name || "",
+        email: customer?.email || "",
+        phone: customer?.phone || "",
+        photo: customer?.photo || "",
+      },
+      delivery: {
+        address: delivery?.address || "",
+        area: delivery?.area || "",
+        district: delivery?.district || "",
+        region: delivery?.region || "",
+        note: delivery?.note || "",
+        coords: delivery?.coords || null,
+      },
+      payment: {
+        method: "sslcommerz",
+        status: "initiated",
+      },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    const serverBase =
+      process.env.SERVER_URL || `http://localhost:${process.env.PORT || 5000}`;
+
+    const gatewayBase =
+      process.env.SSL_ENV === "live"
+        ? "https://securepay.sslcommerz.com"
+        : "https://sandbox.sslcommerz.com";
+
     const initiateData = {
-      store_id: process.env.store_id,
-      store_passwd: process.env.store_passwd,
+      store_id: process.env.SSL_store_id,
+      store_passwd: process.env.SSL_store_passwd,
       total_amount: String(totalAmountBdt),
       currency: "BDT",
       tran_id: transactionId,
-      success_url: "http://localhost:5000/payments/success-payment",
-      fail_url: `${process.env.CLIENT_URL}/fail`,
-      cancel_url: `${process.env.CLIENT_URL}/checkout/cancel`,
-      ipn_url: "http://localhost:5000/ipn-success",
+      success_url: `${serverBase}/payments/ssl/success`,
+      fail_url: `${serverBase}/payments/ssl/fail`,
+      cancel_url: `${serverBase}/payments/ssl/cancel`,
+      ipn_url: `${serverBase}/payments/ssl/ipn`,
       shipping_method: "Courier",
       product_name: plant.name,
       product_category: plant.category || "Plant",
@@ -93,32 +153,264 @@ const createSSLInitialize = ({ plantsCollection }) =>
       ship_country: "Bangladesh",
     };
 
-    const initRes = await fetch(
-      "https://sandbox.sslcommerz.com/gwprocess/v4/api.php",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams(initiateData),
+    const initRes = await fetch(`${gatewayBase}/gwprocess/v4/api.php`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
       },
-    );
+      body: new URLSearchParams(initiateData),
+    });
 
     const data = await initRes.json();
 
-    if (data.status !== "SUCCESS") {
+    if (data.status !== "SUCCESS" || !data.GatewayPageURL) {
+      await sslPaymentsCollection.updateOne(
+        { tranId: transactionId },
+        {
+          $set: {
+            "payment.status": "init_failed",
+            gatewayResponse: data,
+            updatedAt: new Date(),
+          },
+        },
+      );
+
       return res.status(400).json({
         success: false,
-        message: data.failedreason || "SSLCommerze init failed",
+        message: data.failedreason || "Failed to initialize SSLCommerz payment",
         ssl: data,
       });
     }
 
-    res.send({
+    return res.status(200).json({
       success: true,
       url: data.GatewayPageURL,
       sessionkey: data.sessionkey,
+      tranId: transactionId,
     });
+  });
+
+const finalizeSSLOrder = async ({
+  payload,
+  plantsCollection,
+  ordersCollection,
+  trackingCollection,
+  sslPaymentsCollection,
+}) => {
+  if (!payload?.val_id) {
+    throw new Error("Missing val_id");
+  }
+  const validated = await validateSSLPayment(payload.val_id);
+  if (!VALID_SSL_STATUSES.has(validated.status)) {
+    throw new Error(validated.status || "Payment validation failed");
+  }
+  const pending = await sslPaymentsCollection.findOne({
+    tranId: validated.tran_id,
+  });
+  if (!pending) {
+    throw new Error("Pending SSL payment not found");
+  }
+  const existingOrder = await ordersCollection.findOne({
+    "payment.tranId": validated.tran_id,
+  });
+
+  if (existingOrder) {
+    await sslPaymentsCollection.updateOne(
+      { tranId: validated.tran_id },
+      {
+        $set: {
+          "payment.status": "paid",
+          orderId: existingOrder._id,
+          validatedPayload: validated,
+          updatedAt: new Date(),
+        },
+      },
+    );
+    return existingOrder;
+  }
+  if (Number(validated.amount) !== Number(pending.amount)) {
+    throw new Error("Amount mismatch");
+  }
+
+  const plant = await plantsCollection.findOne({
+    _id: new ObjectId(pending.plantId),
+  });
+
+  if (!plant) {
+    throw new Error("Plant not found");
+  }
+
+  if ((plant.quantity || 0) < Number(pending.quantity)) {
+    throw new Error("Insufficient stock while finalizing order");
+  }
+
+  await plantsCollection.updateOne(
+    { _id: new ObjectId(pending.plantId) },
+    {
+      $inc: { quantity: -Number(pending.quantity) },
+      $set: { updatedAt: new Date() },
+    },
+  );
+
+  const order = {
+    plantId: new ObjectId(pending.plantId),
+    plantName: plant.name,
+    plantImage: plant.image,
+    plantCategory: plant.category,
+    quantity: Number(pending.quantity),
+    pricePerUnit: plant.price,
+    totalPrice: plant.price * Number(pending.quantity),
+    customer: pending.customer,
+    seller: {
+      name: plant.seller?.name || "",
+      email: plant.seller?.email || "",
+    },
+    delivery: pending.delivery,
+    payment: {
+      method: "sslcommerz",
+      status: "paid",
+      tranId: validated.tran_id,
+      valId: validated.val_id,
+      bankTranId: validated.bank_tran_id || "",
+      cardType: validated.card_type || "",
+      cardBrand: validated.card_brand || "",
+      storeAmount: Number(validated.store_amount || 0),
+      raw: validated,
+    },
+    status: "pending",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  const result = await ordersCollection.insertOne(order);
+
+  await trackingCollection.insertOne({
+    orderId: result.insertedId,
+    plantName: order.plantName,
+    plantImage: order.plantImage,
+    customer: order.customer,
+    seller: order.seller,
+    delivery: order.delivery,
+    events: [
+      {
+        status: "pending",
+        title: "Order Received",
+        description: "Your online payment has been placed successfully.",
+        icon: "receipt",
+        timestamp: new Date(),
+        actor: order.customer.email,
+      },
+    ],
+    currentStatus: "pending",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+
+  await sslPaymentsCollection.updateOne(
+    { tranId: validated.tran_id },
+    {
+      $set: {
+        "payment.status": "paid",
+        orderId: result.insertedId,
+        validatedPayload: validated,
+        updatedAt: new Date(),
+      },
+    },
+  );
+
+  return { ...order, _id: result.insertedId };
+};
+
+const sslSuccess = ({
+  plantsCollection,
+  ordersCollection,
+  trackingCollection,
+  sslPaymentsCollection,
+}) =>
+  asyncHandler(async (req, res) => {
+    try {
+      const payload = Object.keys(req.body || {}).length ? req.body : req.query;
+
+      const order = await finalizeSSLOrder({
+        payload,
+        plantsCollection,
+        ordersCollection,
+        trackingCollection,
+        sslPaymentsCollection,
+      });
+
+      return res.redirect(
+        `${process.env.CLIENT_URL}/checkout/ssl/success?orderId=${order._id}`,
+      );
+    } catch (error) {
+      return res.redirect(
+        `${process.env.CLIENT_URL}/checkout/ssl/fail?message=${encodeURIComponent(error.message)}`,
+      );
+    }
+  });
+
+const sslIPN = ({
+  plantsCollection,
+  ordersCollection,
+  trackingCollection,
+  sslPaymentsCollection,
+}) =>
+  asyncHandler(async (req, res) => {
+    try {
+      await finalizeSSLOrder({
+        payload: req.body,
+        plantsCollection,
+        ordersCollection,
+        trackingCollection,
+        sslPaymentsCollection,
+      });
+
+      return res.status(200).send("OK");
+    } catch (error) {
+      return res.status(400).send(error.message || "FAILED");
+    }
+  });
+
+const sslFail = ({ sslPaymentsCollection }) =>
+  asyncHandler(async (req, res) => {
+    const payload = Object.keys(req.body || {}).length ? req.body : req.query;
+    const tranId = payload?.tran_id;
+
+    if (tranId) {
+      await sslPaymentsCollection.updateOne(
+        { tranId },
+        {
+          $set: {
+            "payment.status": "failed",
+            failPayload: payload,
+            updatedAt: new Date(),
+          },
+        },
+      );
+    }
+
+    return res.redirect(`${process.env.CLIENT_URL}/checkout/ssl/fail`);
+  });
+
+const sslCancel = ({ sslPaymentsCollection }) =>
+  asyncHandler(async (req, res) => {
+    const payload = Object.keys(req.body || {}).length ? req.body : req.query;
+    const tranId = payload?.tran_id;
+
+    if (tranId) {
+      await sslPaymentsCollection.updateOne(
+        { tranId },
+        {
+          $set: {
+            "payment.status": "cancelled",
+            cancelPayload: payload,
+            updatedAt: new Date(),
+          },
+        },
+      );
+    }
+
+    return res.redirect(`${process.env.CLIENT_URL}/checkout/ssl/cancel`);
   });
 
 const createStripeCheckoutSession = ({ plantsCollection }) =>
@@ -403,15 +695,12 @@ const finalizeStripeOrder = ({
     });
   });
 
-const successPayment = () =>
-  asyncHandler(async (req, res) => {
-    const paymentSuccess = req.body;
-    console.log(paymentSuccess, "Success Info", req);
-  });
-
 module.exports = {
   createStripeCheckoutSession,
   finalizeStripeOrder,
   createSSLInitialize,
-  successPayment,
+  sslSuccess,
+  sslFail,
+  sslIPN,
+  sslCancel,
 };

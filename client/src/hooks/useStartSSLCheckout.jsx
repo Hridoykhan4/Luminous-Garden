@@ -18,7 +18,7 @@ const useStartSSLCheckout = () => {
         onError: (error) => {
             const msg =
                 error?.response?.data?.message ||
-                "Failed to start Stripe checkout.";
+                "Failed to start online payment.";
             toast.error(msg);
         },
     });
