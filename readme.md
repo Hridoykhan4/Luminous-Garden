@@ -29,6 +29,7 @@ Luminous Garden was built to demonstrate real-world full-stack development skill
 ## Tech Stack
 
 ### Frontend
+
 - React 19
 - Vite
 - React Router
@@ -46,6 +47,7 @@ Luminous Garden was built to demonstrate real-world full-stack development skill
 - React Icons
 
 ### Backend
+
 - Node.js
 - Express.js
 - MongoDB
@@ -58,6 +60,7 @@ Luminous Garden was built to demonstrate real-world full-stack development skill
 - Zod
 
 ### Payment Integration
+
 - Stripe
 - SSLCommerz
 
